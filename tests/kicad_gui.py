@@ -14,6 +14,7 @@ with patch.object(pcbnew,'GetBoard',lambda:board), patch.object(pcbnew,'GetUserU
     dialog = Dialog(board)
     assert dialog.initialized
     assert not dialog.m_chkAdaptiveFill.GetValue()
+    assert not dialog.m_chkAllCopperLayers.GetValue()
     assert dialog.m_txtMinSpacing.GetValue() == '80'
     assert dialog.m_txtMaxSpacing.GetValue() == '150'
     assert not dialog.m_txtMinSpacing.IsEnabled()
@@ -23,7 +24,7 @@ with patch.object(pcbnew,'GetBoard',lambda:board), patch.object(pcbnew,'GetUserU
     dialog.Layout()
     controls = [dialog.m_chkAdaptiveFill,dialog.m_lblAdaptiveLimits,
                 dialog.m_txtMinSpacing,dialog.m_txtMaxSpacing,
-                dialog.m_chkOnlyFilledCopper,dialog.m_chkClearOwn,
+                dialog.m_chkAllCopperLayers,dialog.m_chkClearOwn,
                 dialog.m_btnOk,dialog.m_btnCancel,dialog.m_btnClear]
     bounds = dialog.GetClientRect()
     for control in controls:
@@ -38,18 +39,20 @@ with patch.object(pcbnew,'GetBoard',lambda:board), patch.object(pcbnew,'GetUserU
     # Old per-zone settings load defaults without requiring migration.
     config = pcbnew.PCB_TEXT(board)
     config.SetLayer(pcbnew.User_9)
-    config.SetText(json.dumps({'ViaStitching':'0.1','adaptive_fixture':{'HSpacing':'3','Randomize':True}}))
+    config.SetText(json.dumps({'ViaStitching':'0.1','adaptive_fixture':{'HSpacing':'3','Randomize':True,'OnlyFilledCopper':True}}))
     board.Add(config)
     old = Dialog(board)
     assert old.initialized
     assert not old.m_chkAdaptiveFill.GetValue()
     assert old.m_txtHSpacing.GetValue() == '3', (old.config, config.GetLayerName(), config.GetText())
     assert old._get_fill_style() == 'Randomize'
+    assert old.m_chkAllCopperLayers.GetValue()
     old.Destroy()
     config.SetText(json.dumps({'ViaStitcher':'0.3.4','adaptive_fixture':{
-        'AdaptiveFill':True,'MinSpacingPercent':'90','MaxSpacingPercent':'125'}}))
+        'AdaptiveFill':True,'RequireAllCopperLayers':False,'MinSpacingPercent':'90','MaxSpacingPercent':'125'}}))
     saved = Dialog(board)
     assert saved.m_chkAdaptiveFill.GetValue()
+    assert not saved.m_chkAllCopperLayers.GetValue()
     assert saved.m_txtMinSpacing.IsEnabled()
     assert saved.m_txtMinSpacing.GetValue() == '90'
     assert saved.m_txtMaxSpacing.GetValue() == '125'

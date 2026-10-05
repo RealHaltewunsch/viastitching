@@ -55,9 +55,9 @@ The zone net is selected automatically, but another net can be chosen when neede
 - vertical and horizontal grid offsets;
 - clearance from the zone boundary and board edges (`0` disables the additional clearance check);
 - optional randomized placement;
-- **Only place vias that connect filled copper of the selected net on multiple layers**.
+- **Require copper connection on all layers (off: at least two)**.
 
-The filled-copper option is enabled by default. When enabled, a via is created only when its complete annular area is over filled copper of the selected net on every relevant layer. When disabled, ViaStitcher uses the selected zone's filled area, matching the earlier placement behavior. This setting is saved independently for each named zone.
+The copper-connection checkbox is **off by default**: a via must have its full annular area over the selected net on at least two copper layers. Enable it to require this on every copper layer traversed by the through via. The setting is saved per zone as `RequireAllCopperLayers`. Legacy `OnlyFilledCopper=true` settings migrate to the stricter all-layer mode; unchecked legacy settings now require at least two connected layers instead of allowing single-layer placement. The checkbox never disables collision checks.
 
 Generated vias are marked as free vias when supported by the KiCad API. This prevents KiCad's automatic via-net update from changing their assigned net when several filled zones overlap.
 
@@ -76,7 +76,8 @@ Enable **Refill islands and gaps** to run a second pass after the selected grid
 style (Standard, Stagger, or Randomize). It uses the selected zone's actual
 filled copper polygons, including holes and disconnected islands on each layer.
 Small islands can receive a via even when no grid point falls inside them.
-Existing vias of the selected net count when they span all selected zone layers.
+Existing vias of the selected net count when they satisfy the chosen
+two-layer or all-layer copper-connection requirement.
 Vias on a different island do not count as that island's connection.
 
 **Refill spacing (min/max %)** defaults to **80 / 150**. These percentages apply

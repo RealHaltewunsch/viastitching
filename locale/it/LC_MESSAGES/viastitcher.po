@@ -171,3 +171,6 @@ msgstr "Via aggiuntivi: {vias}\nPosizioni controllate: {checked}"
 
 msgid "Search limit reached. Partial results kept; some areas may remain unfilled."
 msgstr "Limite di ricerca raggiunto. Risultati parziali mantenuti; alcune aree potrebbero restare vuote."
+
+msgid "Require copper connection on all layers (off: at least two)"
+msgstr "Richiedi rame su tutti gli strati (disattivato: almeno due)"
