@@ -2,7 +2,7 @@
   "$schema": "https://go.kicad.org/pcm/schemas/v2",
   "name": "ViaStitcher",
   "description": "Fill a selected copper zone with a configurable pattern of stitching vias.",
-  "description_full": "ViaStitcher is a KiCad PCB Editor action plugin that fills a selected copper zone with a configurable grid of vias. It supports spacing and offset controls, clearance checks, randomized placement, filled-copper validation, and selective removal of vias previously created by the plugin.",
+  "description_full": "ViaStitcher is a KiCad PCB Editor action plugin that fills a selected copper zone with a configurable grid of vias. It supports spacing and offset controls, clearance checks, randomized placement, filled-copper validation, and selective removal of vias previously created by the plugin. This fork preview adds optional adaptive refill of copper islands and grid gaps with configurable spacing limits.",
   "identifier": "com.github.weirdgyn.viastitcher",
   "type": "plugin",
   "author": {
@@ -13,15 +13,15 @@
   },
   "license": "MIT",
   "resources": {
-    "homepage": "https://github.com/weirdgyn/viastitcher",
-    "repository": "https://github.com/weirdgyn/viastitcher",
-    "bugtracker": "https://github.com/weirdgyn/viastitcher/issues"
+    "homepage": "https://github.com/RealHaltewunsch/viastitching",
+    "repository": "https://github.com/RealHaltewunsch/viastitching",
+    "bugtracker": "https://github.com/RealHaltewunsch/viastitching/issues"
   },
   "versions": [
     {
-      "version": "0.3.4",
+      "version": "0.3.5",
       "version_epoch": 0,
-      "status": "stable",
+      "status": "testing",
       "kicad_version": "6.0",
       "runtime": "swig"
     }

@@ -114,4 +114,5 @@ jobs:
             "repository-metadata.json#Metadata for the official KiCad addon repository" \
             --verify-tag \
             --title "ViaStitcher ${{ steps.version.outputs.version }}" \
+            --prerelease \
             --generate-notes
