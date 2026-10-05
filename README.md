@@ -70,6 +70,71 @@ ViaStitcher checks pads, tracks, vias, footprint zones, board edges, and items b
 
 Use **Clear** to remove matching vias from the selected zone. With **Clear only plugin placed vias** enabled, only vias belonging to that zone's ViaStitcher group are removed. Disable it to remove any via matching the selected net, size, and drill values inside the zone.
 
+## Optional island and gap refill
+
+Enable **Refill islands and gaps** to run a second pass after the selected grid
+style (Standard, Stagger, or Randomize). It uses the selected zone's actual
+filled copper polygons, including holes and disconnected islands on each layer.
+Small islands can receive a via even when no grid point falls inside them.
+Existing vias of the selected net count when they span all selected zone layers.
+Vias on a different island do not count as that island's connection.
+
+**Refill spacing (min/max %)** defaults to **80 / 150**. These percentages apply
+to center-to-center distances normalized by the horizontal and vertical grid
+spacing: `hypot(dx / HSpacing, dy / VSpacing)`. Thus a horizontal 4 mm grid aims
+for 4 mm neighbors, allowing 3.2–6 mm in that direction. Limits must satisfy
+`0 < minimum <= 100 <= maximum`. They affect only additional vias; existing and
+first-pass vias are not moved. The option and both limits are saved per zone;
+older configurations default to refill disabled.
+
+Refill tries nominal grid sites first, then nearby positions inside each grid
+cell, coarse to fine. The final search step is the smaller of 1% of the relevant
+pitch and one quarter of the via diameter (at least one internal board unit).
+Each cell search is limited to 20,000 distinct candidates. The nearest grid
+position is preferred; all accepted positions must meet the configured spacing
+limits and the plugin's copper, collision, and boundary checks. The first via
+on an unserved island does not require an existing neighbor within the maximum
+distance, but still obeys minimum spacing and physical collision checks.
+Deferred cells are revisited when accepted vias make them reachable.
+
+This is a bounded placement heuristic, not an exhaustive search or a guarantee
+of uniform density. Narrow or obstructed copper may remain unserved. A progress
+dialog allows stopping the refill; vias already placed remain in the plugin's
+usual group and can be removed with **Clear only plugin placed vias**. The final
+message separates grid and additional vias and counts unserved islands per
+layer (the same XY island on two layers counts twice).
+
+Both passes check newly added vias as well as pre-existing board objects.
+These are the plugin's existing geometric checks, not KiCad's complete custom
+rule engine. Run KiCad DRC after stitching, including a zone refill. On older
+KiCad versions without access to filled polygon geometry, disable refill to
+continue using the regular grid.
+
+## Tests
+
+Run the geometry tests without KiCad:
+
+```sh
+python3 -m unittest discover -s tests -v
+```
+
+With KiCad 10's Python (including `pcbnew` and `wx`) and a desktop session:
+
+```sh
+export KICAD_CLI=/path/to/kicad-cli
+/path/to/kicad-python tests/kicad_integration.py /tmp/viastitcher-check
+python3 tests/check_drc.py /tmp/viastitcher-check
+/path/to/kicad-python tests/kicad_gui.py
+```
+
+The integration script builds synthetic two-layer boards with a blocked grid
+site, disconnected copper, and a backing plane. It checks all three styles,
+repeat runs, saved settings, validation, and removal of both passes. The DRC
+comparison rejects new violations and additional unconnected items. Native wx
+tests check control bounds, overlap, toggling, and loading old/new settings.
+The integration fixtures target KiCad 10; the existing plugin compatibility
+fallbacks for earlier versions are retained.
+
 ## TODO
 
 Some features still to code:
