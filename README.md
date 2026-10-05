@@ -90,7 +90,10 @@ older configurations default to refill disabled.
 Refill tries nominal grid sites first, then nearby positions inside each grid
 cell, coarse to fine. The final search step is the smaller of 1% of the relevant
 pitch and one quarter of the via diameter (at least one internal board unit).
-Each cell search is limited to 20,000 distinct candidates. The nearest grid
+Each cell search is limited to 512 distinct candidates. The whole refill pass
+has a 50,000-candidate / 10-second budget (checked between candidates); reaching
+a budget keeps partial results and reports that the search was incomplete.
+Refinement may stop before the finest step when a budget is reached. The nearest grid
 position is preferred; all accepted positions must meet the configured spacing
 limits and the plugin's copper, collision, and boundary checks. The first via
 on an unserved island does not require an existing neighbor within the maximum

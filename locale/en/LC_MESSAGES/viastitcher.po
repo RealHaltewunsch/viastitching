@@ -164,3 +164,9 @@ msgstr "This KiCad version cannot read filled copper polygons. Disable refill to
 
 msgid "Fill the selected copper zone before using refill."
 msgstr "Fill the selected copper zone before using refill."
+
+msgid "Additional vias: {vias}\nPositions checked: {checked}"
+msgstr "Additional vias: {vias}\nPositions checked: {checked}"
+
+msgid "Search limit reached. Partial results kept; some areas may remain unfilled."
+msgstr "Search limit reached. Partial results kept; some areas may remain unfilled."
