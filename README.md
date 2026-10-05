@@ -76,8 +76,10 @@ Enable **Refill islands and gaps** to run a second pass after the selected grid
 style (Standard, Stagger, or Randomize). It uses the selected zone's actual
 filled copper polygons, including holes and disconnected islands on each layer.
 Small islands can receive a via even when no grid point falls inside them.
-Existing vias of the selected net count when they satisfy the chosen
-two-layer or all-layer copper-connection requirement.
+Every existing via of the selected net blocks its minimum-spacing area,
+including manually placed vias and vias without qualifying copper connections.
+Only vias satisfying the chosen two-layer or all-layer connection requirement
+count toward electrical island coverage. These are separate checks.
 Vias on a different island do not count as that island's connection.
 
 **Refill spacing (min/max %)** defaults to **80 / 150**. These percentages apply
@@ -88,28 +90,30 @@ for 4 mm neighbors, allowing 3.2–6 mm in that direction. Limits must satisfy
 first-pass vias are not moved. The option and both limits are saved per zone;
 older configurations default to refill disabled.
 
-Refill tries nominal grid sites first, then points between copper boundaries
-and foreign tracks to find narrow corridors. Every suggested point passes the
-same copper, collision, and boundary checks as a regular via. Nearby positions
-inside each grid cell are then searched from coarse to fine, across the whole
-board at each refinement level so early blocked cells cannot consume all work.
-The final search step is the smaller of 1% of the relevant
-pitch and one quarter of the via diameter (at least one internal board unit).
-Each cell search is limited to 512 mesh candidates and 64 geometry suggestions.
-The whole refill pass
-has a 50,000-candidate / 10-second budget (checked between candidates); reaching
-a budget keeps partial results and reports that the search was incomplete.
-Refinement may stop before the finest step when a budget is reached. The nearest grid
-position is preferred. Minimum spacing is mandatory for all additional vias.
-The maximum is the preferred reach when extending an existing pattern:
-deferred cells are revisited when accepted vias make them reachable. If that
-cannot reach an empty pocket, the search may seed that pocket without a nearby
-neighbor, just as it can seed an unserved island. This is necessary because
-obstacles can separate valid via positions even on one connected copper plane.
-Such seeds still obey minimum spacing and every physical placement check.
+Refill tries nominal grid sites first, then computes the centers of free
+horizontal and vertical intervals between obstacles. Track widths, via size,
+and the existing collision margins are included before computing these centers.
+The perpendicular direction is also checked for pockets offset in both axes.
+Regions narrower than the via diameter in either dimension are discarded.
+Areas proven entirely covered by via spacing exclusions are skipped; partially
+free areas remain candidates. New vias update the spacing index immediately.
 
-This is a bounded placement heuristic, not an exhaustive search or a guarantee
-of uniform density. Narrow or obstructed copper may remain unserved. A progress
+There is no fixed wall-clock or total-candidate cutoff. The finite search ends
+when a complete traversal adds no more vias; each successful placement completes
+one cell. The progress dialog remains cancellable. No increasingly fine search
+mesh is generated. Between valid geometric candidates, spacing near 100% of the
+requested pitch is preferred over packing at the minimum percentage.
+
+Minimum spacing is mandatory for every additional via, relative to **all**
+existing same-net vias and all previously added refill vias. The main grid pass
+retains its original collision rules and is not constrained by this percentage.
+The maximum is the preferred reach when extending an existing pattern. If that
+cannot reach an empty pocket, the search may seed that pocket without a nearby
+neighbor. Such seeds still obey minimum spacing and physical placement checks.
+
+This is a geometric placement heuristic, not an exhaustive search or a guarantee
+of uniform density. Narrow or obstructed copper may remain unserved; pad bounding
+boxes conservatively guide the search, so irregular pad corners may be missed. A progress
 dialog allows stopping the refill; vias already placed remain in the plugin's
 usual group and can be removed with **Clear only plugin placed vias**. The final
 message separates grid and additional vias and counts unserved islands per

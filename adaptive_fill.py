@@ -4,7 +4,6 @@ Coordinates are board internal units. Spacing is measured in the metric
 hypot(dx / horizontal_pitch, dy / vertical_pitch), so rectangular grids work.
 """
 import math
-from itertools import islice
 import time
 from dataclasses import dataclass
 
@@ -97,6 +96,11 @@ class ViaIndex:
         self.covered.update(regions)
 
     def nearby(self, point, distance):
+        for other, regions in self.nearby_points(point, distance):
+            yield math.hypot((other[0] - point[0]) / self.pitch[0],
+                             (other[1] - point[1]) / self.pitch[1]), regions
+
+    def nearby_points(self, point, distance):
         cx, cy = self.cell(point)
         reach = math.ceil(distance)
         if (2 * reach + 1) ** 2 > len(self.buckets):
@@ -110,7 +114,32 @@ class ViaIndex:
                 d = math.hypot((other[0] - point[0]) / self.pitch[0],
                                (other[1] - point[1]) / self.pitch[1])
                 if d <= distance:
-                    yield d, regions
+                    yield other, regions
+
+    def blocks_box(self, bounds, minimum):
+        """Prove a rectangle covered by exclusion disks; uncertain stays open.
+
+        Work in the normalized pitch metric. A disk containing all corners
+        contains the whole rectangle. Subdivision also proves coverage by a
+        union of disks without mistaking four blocked corners for full cover.
+        """
+        x0, y0, x1, y1 = bounds
+        center = ((x0+x1)/2, (y0+y1)/2)
+        radius = math.hypot((x1-x0)/self.pitch[0], (y1-y0)/self.pitch[1])/2
+        points = [(p[0]/self.pitch[0], p[1]/self.pitch[1])
+                  for p, _ in self.nearby_points(center, minimum + radius)]
+        def covered(left, top, right, bottom, depth):
+            if any(max((x-left)**2, (x-right)**2) +
+                   max((y-top)**2, (y-bottom)**2) < minimum**2 for x,y in points):
+                return True
+            if not depth:
+                return False
+            mx, my = (left+right)/2, (top+bottom)/2
+            return all(covered(*box, depth-1) for box in (
+                (left,top,mx,my), (mx,top,right,my),
+                (left,my,mx,bottom), (mx,my,right,bottom)))
+        return bool(points) and covered(x0/self.pitch[0], y0/self.pitch[1],
+                                       x1/self.pitch[0], y1/self.pitch[1], 2)
 
 
 def validate_settings(pitch, diameter, minimum, maximum):
@@ -120,44 +149,80 @@ def validate_settings(pitch, diameter, minimum, maximum):
         raise ValueError("Distance limits must include 100% of the grid spacing")
 
 
-def local_candidates(target, bounds, pitch, diameter, limit=512, spacing_error=None):
-    """Search one clipped grid cell, coarse to fine, preferring the grid point.
+def capsule_section(a, b, radius, axis, value):
+    """Cross-section of a track expanded by via radius and clearance."""
+    other = 1-axis
+    cuts = []
+    for p in (a,b):
+        delta = value-p[other]
+        if abs(delta) <= radius:
+            extent = math.sqrt(max(0, radius*radius-delta*delta))
+            cuts.extend((p[axis]-extent, p[axis]+extent))
+    dx,dy = b[0]-a[0], b[1]-a[1]
+    length = math.hypot(dx,dy)
+    if length:
+        nx,ny = -dy*radius/length, dx*radius/length
+        ring = [(a[0]+nx,a[1]+ny),(b[0]+nx,b[1]+ny),
+                (b[0]-nx,b[1]-ny),(a[0]-nx,a[1]-ny)]
+        for p,q in zip(ring,ring[1:]+ring[:1]):
+            if (p[other]>value)!=(q[other]>value):
+                cuts.append(p[axis]+(q[axis]-p[axis])*(value-p[other])/(q[other]-p[other]))
+    return (min(cuts),max(cuts)) if cuts else None
 
-    Quantize to integer board units, remove duplicate candidates, and cap work
-    even when a tiny via or extreme user setting requests impractical precision.
+
+def gap_candidates(target, region, pitch, diameter, index, minimum, blocked=None):
+    """Centers of free X/Y intervals, not a progressively refined point mesh.
+
+    Copper intervals are eroded by the via radius; obstacle cross-sections
+    already include the required clearance. Circular exclusion zones use the
+    normalized X/Y pitch. Final disk geometry and physical checks stay shared.
     """
-    left, top, right, bottom = bounds
-    left, right = max(left, target[0] - pitch[0] / 2), min(right, target[0] + pitch[0] / 2)
-    top, bottom = max(top, target[1] - pitch[1] / 2), min(bottom, target[1] + pitch[1] / 2)
-    if left > right or top > bottom:
-        return
-    seen = set()
-    seeds = [target, ((left + right) / 2, (top + bottom) / 2)]
-    resolution = [max(1, min(step / 100, diameter / 4)) for step in pitch]
-    delta = [max(resolution[i], pitch[i] / 4) for i in (0, 1)]
-    while True:
-        nx = max(1, math.ceil((right - left) / delta[0]))
-        ny = max(1, math.ceil((bottom - top) / delta[1]))
-        # Do not allocate an unbounded candidate list for extreme settings.
-        if (nx + 1) * (ny + 1) > limit * 4:
-            return
-        candidates = seeds + [(left + (right - left) * x / nx,
-                               top + (bottom - top) * y / ny)
-                              for x in range(nx + 1) for y in range(ny + 1)]
-        candidates.sort(key=lambda p: (((p[0] - target[0]) / pitch[0]) ** 2
-                                      + ((p[1] - target[1]) / pitch[1]) ** 2,
-                                      spacing_error(p) if spacing_error else 0, p))
-        for point in candidates:
-            point = tuple(int(round(v)) for v in point)
-            if point not in seen and left <= point[0] <= right and top <= point[1] <= bottom:
-                seen.add(point)
-                yield point
-                if len(seen) >= limit:
-                    return
-        if delta == resolution:
-            return
-        delta = [max(resolution[i], delta[i] / 2) for i in (0, 1)]
-        seeds = []
+    radius = diameter/2
+    bounds = region.bounds
+    low = [max(bounds[i]+radius, target[i]-pitch[i]/2) for i in (0,1)]
+    high = [min(bounds[i+2]-radius, target[i]+pitch[i]/2) for i in (0,1)]
+    if any(low[i]>high[i] for i in (0,1)):
+        return []
+    def centers(axis, value):
+        other = 1-axis
+        # The band index accelerates horizontal sections of detailed polygons.
+        edges = (region.edges[i] for i in region.bands[region._band(value)]) if axis == 0 else region.edges
+        cuts = sorted(a[axis]+(b[axis]-a[axis])*(value-a[other])/(b[other]-a[other])
+                      for a,b in edges if (a[other]>value)!=(b[other]>value))
+        intervals = [(max(a+radius,low[axis]),min(b-radius,high[axis]))
+                     for a,b in zip(cuts[::2],cuts[1::2])
+                     if max(a+radius,low[axis]) <= min(b-radius,high[axis])]
+        exclusions = list(blocked(axis,value)) if blocked else []
+        center = list(target); center[other] = value
+        for point,_ in index.nearby_points(center, minimum+1):
+            delta = (point[other]-value)/pitch[other]
+            if abs(delta)<minimum:
+                extent = pitch[axis]*math.sqrt(minimum**2-delta**2)
+                exclusions.append((point[axis]-extent,point[axis]+extent))
+        for a,b in sorted(exclusions):
+            remaining = []
+            for left,right in intervals:
+                if b<=left or a>=right:
+                    remaining.append((left,right))
+                else:
+                    if left<a: remaining.append((left,a))
+                    if b<right: remaining.append((b,right))
+            intervals = remaining
+            if not intervals: break
+        return [(a+b)/2 for a,b in intervals]
+    points = set()
+    for axis in (0,1):
+        other = 1-axis
+        fixed = min(high[other],max(low[other],target[other]))
+        for value in centers(axis,fixed):
+            p = [0,0]; p[axis],p[other] = value,fixed
+            points.add(tuple(int(round(v)) for v in p))
+            # Also center the perpendicular direction. This handles pockets
+            # whose free center is offset in both X and Y.
+            for cross in centers(other,value):
+                p[other] = cross
+                points.add(tuple(int(round(v)) for v in p))
+    return points
 
 
 @dataclass
@@ -170,8 +235,8 @@ class FillResult:
 
 
 def refill(regions, index, origin, pitch, diameter, minimum, maximum,
-           place, stagger=False, progress=None, time_limit=10.0, candidate_limit=50000,
-           clock=time.monotonic, candidate_hints=None):
+           place, stagger=False, progress=None, time_limit=None, candidate_limit=None,
+           clock=time.monotonic, candidate_hints=None, blocked=None):
     """Visit each island's grid cells. place(point) checks and commits a via.
 
     The caller indexes pre-existing and first-pass vias. An empty island or
@@ -192,7 +257,8 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
             last_progress = now
             if not progress(result.added, result.examined):
                 result.cancelled = True
-        if now - started >= time_limit or result.examined >= candidate_limit:
+        if ((time_limit is not None and now - started >= time_limit)
+                or (candidate_limit is not None and result.examined >= candidate_limit)):
             result.limited = True
         if result.cancelled or result.limited:
             result.unserved = len(set(range(len(regions))) - index.covered)
@@ -214,13 +280,9 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
     # cannot steal space from an otherwise feasible nominal grid position.
     # Revisit deferred cells when new vias extend the reachable frontier.
     completed = set()
-    # Share the search budget across the entire board before refining any
-    # individual cell. Exhausting 512 candidates in each early blocked cell
-    # used to starve narrow gaps later in the traversal.
-    for first, last in ((0, 0), (-1, -1), (0, 9), (9, 25), (25, 81), (81, 289), (289, 512)):
-        if last == -1 and candidate_hints is None:
-            continue
-        nominal = last == 0
+    # Each successful iteration completes another cell. Stop when a complete
+    # traversal adds nothing; there is no elapsed-time or board-wide work cap.
+    for nominal in (True, False):
         seed_gaps = False
         while True:
             previous_count = result.added
@@ -241,24 +303,28 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                         continue
                     if stop():
                         return result
-                    # Only discard a whole cell when even its farthest corner
-                    # is too close. A blocked center does not exclude offsets.
-                    if any(region_id in ids and d < minimum - math.sqrt(.5)
-                           for d, ids in index.nearby(target, minimum)):
+                    # Discard a cell only when its whole area is proven covered
+                    # by spacing exclusions, never just because corners fail.
+                    bounds = (max(left, target[0]-pitch[0]/2),
+                              max(top, target[1]-pitch[1]/2),
+                              min(right, target[0]+pitch[0]/2),
+                              min(bottom, target[1]+pitch[1]/2))
+                    if index.blocks_box(bounds, minimum):
                         completed.add((region_id, target))
                         continue
                     def spacing_error(point):
-                        distances = [d for d, ids in index.nearby(point, maximum)
-                                     if region_id in ids]
+                        distances = [d for d, _ in index.nearby(point, maximum)]
                         return abs(min(distances) - 1) if distances else 0
                     if nominal:
                         candidates = (target,)
-                    elif last == -1:
-                        candidates = candidate_hints(target)
                     else:
-                        candidates = islice(local_candidates(
-                            target, region.bounds, pitch, diameter, spacing_error=spacing_error), first, last)
-                    deferred = False
+                        suggestions = gap_candidates(target, region, pitch, diameter,
+                                                     index, minimum, blocked)
+                        if candidate_hints:
+                            suggestions = set(suggestions).union(candidate_hints(target))
+                        candidates = sorted(suggestions, key=lambda p: (
+                            spacing_error(p), sum(((p[i]-target[i])/pitch[i])**2
+                                                  for i in (0,1)), p))
                     for point in candidates:
                         if stop():
                             return result
@@ -272,7 +338,6 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                             continue
                         if (not seed_gaps and region_id in index.covered
                                 and not any(region_id in ids for _, ids in neighbors)):
-                            deferred = True
                             continue
                         if not region.fits(point, diameter / 2):
                             outside.add((region_id, point))
@@ -285,10 +350,6 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                             result.added += 1
                             completed.add((region_id, target))
                             break
-                    if last == 512 and not deferred:
-                        # Geometry/physical failures cannot improve when more
-                        # vias are added. Only retry cells awaiting a neighbor.
-                        completed.add((region_id, target))
             if result.added == previous_count:
                 if seed_gaps:
                     break

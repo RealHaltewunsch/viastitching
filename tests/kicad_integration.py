@@ -176,6 +176,23 @@ def vias(board):
     return [v for v in board.GetTracks() if isinstance(v,pcbnew.PCB_VIA)]
 
 
+def spacing_snapshot(board):
+    return {v.m_Uuid.AsString(): (v.GetPosition().x, v.GetPosition().y)
+            for v in vias(board) if v.GetNetname() == 'GND'}
+
+
+def assert_refill_spacing(board, before, pitch, minimum=.8):
+    import math
+    points = list(before.values())
+    for uid, p in spacing_snapshot(board).items():
+        if uid in before:
+            continue
+        for q in points:
+            distance = math.hypot((p[0]-q[0])/pitch[0], (p[1]-q[1])/pitch[1])
+            assert distance >= minimum, (p,q,distance,minimum)
+        points.append(p)
+
+
 def run(output):
     output.mkdir(parents=True,exist_ok=True)
     results = {}
@@ -186,12 +203,14 @@ def run(output):
         random.seed(42)
         h.FillupArea()
         first = len(vias(board))
+        before = spacing_snapshot(board)
         assert first > 0
         assert not any(v.GetPosition().x > mm(30) for v in vias(board))
         pcbnew.SaveBoard(str(output / ('before_%d.kicad_pcb' % style)),board)
         h.fill_settings['adaptive'] = True
         # The nominal origin for this fixture is (4 mm, 4 mm).
         result = h._refill((mm(4),mm(4)), style == 1)
+        assert_refill_spacing(board, before, (mm(4),mm(4)))
         assert result.added > 0, result
         assert result.unserved == 0, result
         assert any(v.GetPosition().x > mm(30) for v in vias(board))
@@ -214,6 +233,9 @@ def run(output):
     assert strict_refill.added == 0 and not vias(board)
     h.m_chkAllCopperLayers.SetValue(False)
     assert h._place_via((mm(4),mm(4)))
+    # The main placement routine intentionally keeps its existing collision
+    # rules: this 1 mm pair is closer than the refill minimum of 3.2 mm.
+    assert h._place_via((mm(5),mm(4)))
     assert not h.HasFilledCopperAt(point(4,4),[pcbnew.F_Cu],board.GetNetcodeFromNetname('GND'),mm(.3))
     assert not h._place_via((mm(12),mm(12)))
     h.FillupArea()
@@ -239,8 +261,10 @@ def run(output):
                 and mm(5) < v.GetPosition().y < mm(20)]
     assert not corridor_vias()
     first = len(vias(board))
+    before = spacing_snapshot(board)
     pcbnew.SaveBoard(str(output/'before_corridor.kicad_pcb'), board)
     result = h._refill((0,0), False)
+    assert_refill_spacing(board, before, (mm(1.5),mm(1.5)))
     assert len(corridor_vias()) >= 8, (result, len(corridor_vias()))
     assert len(h.pcb_group.GetItems()) == first + result.added
     pcbnew.SaveBoard(str(output/'after_corridor.kicad_pcb'), board)
@@ -272,9 +296,12 @@ def run(output):
     with patch.object(module,'refill') as inspect:
         h._refill((mm(4),mm(4)),False)
         index = inspect.call_args.args[1]
-        assert sum(len(bucket) for bucket in index.buckets.values()) == 1
+        assert sum(len(bucket) for bucket in index.buckets.values()) == 2
         assert len(index.covered) == 2
-    results['existing_vias'] = 'Correct net and layer span required'
+    before = spacing_snapshot(board)
+    h._refill((mm(4),mm(4)),False)
+    assert_refill_spacing(board,before,(mm(4),mm(4)))
+    results['existing_vias'] = 'All same-net vias block spacing; only connected vias supply islands'
 
     # Persist and reload new fields through the real process path.
     board,zone = board_fixture(); h = harness(board,zone,adaptive=True)

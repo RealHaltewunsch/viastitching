@@ -13,7 +13,7 @@ import math
 
 from .viastitcher_gui import viastitcher_gui
 from .localization import _
-from .adaptive_fill import Region, ViaIndex, refill, validate_settings
+from .adaptive_fill import Region, ViaIndex, refill, validate_settings, capsule_section
 
 numpy_available = False
 try:
@@ -653,47 +653,49 @@ class ViaStitcherDialog(viastitcher_gui):
         index = ViaIndex(settings["pitch"])
         netcode = self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection())
         required_layers = set(self._copper_layers())
-        # Midpoints between copper boundaries and foreign track centerlines
-        # find narrow corridors that a uniform candidate mesh can miss. These
-        # are suggestions only: _place_via still applies every ordinary check.
-        segments = [edge for region in self.fill_regions for edge in region.edges]
+        # Build configuration-space obstacles once: positions forbidden to a
+        # via center, using the same margins as CheckOverlap. These sections
+        # guide candidates; the shared placement routine remains authoritative.
+        capsules, boxes = [], []
+        radius = settings["diameter"]/2 + self.clearance
+        margin = pcbnew.FromMM(.35)
         for item in self.overlappings:
             if type(item) is pcbnew.PCB_TRACK and item.GetNetCode() != netcode:
-                a, b = item.GetStart(), item.GetEnd()
-                segments.append(((a.x, a.y), (b.x, b.y)))
+                a,b = item.GetStart(),item.GetEnd()
+                capsules.append(((a.x,a.y),(b.x,b.y),
+                                 radius+self.clearance+margin+item.GetWidth()/2))
+            elif isinstance(item,pcbnew.PCB_VIA) and item.GetNetCode() == netcode:
+                p = item.GetPosition()
+                capsules.append(((p.x,p.y),(p.x,p.y), settings["drill"]/2 +
+                                 self.clearance+item.GetDrillValue()/2+pcbnew.FromMM(.5)))
+            elif type(item) is pcbnew.PAD or isinstance(item,pcbnew.PCB_VIA):
+                if not required_layers.intersection(item.GetLayerSet().Seq()):
+                    continue
+                box = item.GetBoundingBox()
+                boxes.append((box.GetLeft()-radius-margin, box.GetTop()-radius-margin,
+                              box.GetRight()+radius+margin, box.GetBottom()+radius+margin))
         sections = {}
-        hints = {}
-        def candidate_hints(target):
-            if target not in hints:
-                points = set()
-                for axis in (0, 1):
-                    other = 1 - axis
-                    key = (axis, target[other])
-                    if key not in sections:
-                        cuts = sorted(set(a[axis] + (b[axis] - a[axis]) *
-                            (target[other] - a[other]) / (b[other] - a[other])
-                            for a, b in segments
-                            if (a[other] > target[other]) != (b[other] > target[other])))
-                        sections[key] = [(a + b) / 2 for a, b in zip(cuts, cuts[1:])]
-                    for value in sections[key]:
-                        if abs(value - target[axis]) <= settings["pitch"][axis] / 2:
-                            point = list(target)
-                            point[axis] = int(round(value))
-                            points.add(tuple(point))
-                hints[target] = sorted(points, key=lambda p: (
-                    sum(((p[i] - target[i]) / settings["pitch"][i]) ** 2 for i in (0, 1)), p))[:64]
-            return hints[target]
+        def blocked(axis,value):
+            key = axis,value
+            if key not in sections:
+                intervals = [capsule_section(a,b,r,axis,value) for a,b,r in capsules]
+                intervals.extend((box[axis],box[axis+2]) for box in boxes
+                                 if box[1-axis] <= value <= box[3-axis])
+                sections[key] = [interval for interval in intervals if interval is not None]
+            return sections[key]
         for via in self.board.GetTracks():
             if not isinstance(via, pcbnew.PCB_VIA) or via.GetNetCode() != netcode:
                 continue
             spanned = required_layers.intersection(via.GetLayerSet().Seq())
-            if self.m_chkAllCopperLayers.GetValue() and not required_layers.issubset(spanned):
-                continue
-            if not self.HasFilledCopperAt(via.GetPosition(), sorted(spanned), netcode, _via_width(via) / 2):
-                continue
             point = (via.GetPosition().x, via.GetPosition().y)
+            # Every same-net via excludes nearby refill positions. Electrical
+            # island coverage is a separate property, never an index filter.
+            connects = (not self.m_chkAllCopperLayers.GetValue()
+                        or required_layers.issubset(spanned)) and self.HasFilledCopperAt(
+                            via.GetPosition(), sorted(spanned), netcode, _via_width(via) / 2)
             touched = [i for i, region in enumerate(self.fill_regions)
-                       if region.fits(point, _via_width(via, region.layer) / 2)]
+                       if connects and region.layer in spanned
+                       and region.fits(point, _via_width(via, region.layer) / 2)]
             index.add(point, touched)
         dialog = wx.ProgressDialog(_("Refill islands and gaps"),
             _("Searching for additional via positions..."), parent=self,
@@ -705,7 +707,7 @@ class ViaStitcherDialog(viastitcher_gui):
             return refill(self.fill_regions, index, origin, settings["pitch"],
                           settings["diameter"], settings["minimum"], settings["maximum"],
                           self._place_via, stagger=stagger, progress=progress,
-                          candidate_hints=candidate_hints)
+                          blocked=blocked)
         finally:
             dialog.Destroy()
 
