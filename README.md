@@ -88,18 +88,25 @@ for 4 mm neighbors, allowing 3.2–6 mm in that direction. Limits must satisfy
 first-pass vias are not moved. The option and both limits are saved per zone;
 older configurations default to refill disabled.
 
-Refill tries nominal grid sites first, then nearby positions inside each grid
-cell, coarse to fine. The final search step is the smaller of 1% of the relevant
+Refill tries nominal grid sites first, then points between copper boundaries
+and foreign tracks to find narrow corridors. Every suggested point passes the
+same copper, collision, and boundary checks as a regular via. Nearby positions
+inside each grid cell are then searched from coarse to fine, across the whole
+board at each refinement level so early blocked cells cannot consume all work.
+The final search step is the smaller of 1% of the relevant
 pitch and one quarter of the via diameter (at least one internal board unit).
-Each cell search is limited to 512 distinct candidates. The whole refill pass
+Each cell search is limited to 512 mesh candidates and 64 geometry suggestions.
+The whole refill pass
 has a 50,000-candidate / 10-second budget (checked between candidates); reaching
 a budget keeps partial results and reports that the search was incomplete.
 Refinement may stop before the finest step when a budget is reached. The nearest grid
-position is preferred; all accepted positions must meet the configured spacing
-limits and the plugin's copper, collision, and boundary checks. The first via
-on an unserved island does not require an existing neighbor within the maximum
-distance, but still obeys minimum spacing and physical collision checks.
-Deferred cells are revisited when accepted vias make them reachable.
+position is preferred. Minimum spacing is mandatory for all additional vias.
+The maximum is the preferred reach when extending an existing pattern:
+deferred cells are revisited when accepted vias make them reachable. If that
+cannot reach an empty pocket, the search may seed that pocket without a nearby
+neighbor, just as it can seed an unserved island. This is necessary because
+obstacles can separate valid via positions even on one connected copper plane.
+Such seeds still obey minimum spacing and every physical placement check.
 
 This is a bounded placement heuristic, not an exhaustive search or a guarantee
 of uniform density. Narrow or obstructed copper may remain unserved. A progress

@@ -653,6 +653,36 @@ class ViaStitcherDialog(viastitcher_gui):
         index = ViaIndex(settings["pitch"])
         netcode = self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection())
         required_layers = set(self._copper_layers())
+        # Midpoints between copper boundaries and foreign track centerlines
+        # find narrow corridors that a uniform candidate mesh can miss. These
+        # are suggestions only: _place_via still applies every ordinary check.
+        segments = [edge for region in self.fill_regions for edge in region.edges]
+        for item in self.overlappings:
+            if type(item) is pcbnew.PCB_TRACK and item.GetNetCode() != netcode:
+                a, b = item.GetStart(), item.GetEnd()
+                segments.append(((a.x, a.y), (b.x, b.y)))
+        sections = {}
+        hints = {}
+        def candidate_hints(target):
+            if target not in hints:
+                points = set()
+                for axis in (0, 1):
+                    other = 1 - axis
+                    key = (axis, target[other])
+                    if key not in sections:
+                        cuts = sorted(set(a[axis] + (b[axis] - a[axis]) *
+                            (target[other] - a[other]) / (b[other] - a[other])
+                            for a, b in segments
+                            if (a[other] > target[other]) != (b[other] > target[other])))
+                        sections[key] = [(a + b) / 2 for a, b in zip(cuts, cuts[1:])]
+                    for value in sections[key]:
+                        if abs(value - target[axis]) <= settings["pitch"][axis] / 2:
+                            point = list(target)
+                            point[axis] = int(round(value))
+                            points.add(tuple(point))
+                hints[target] = sorted(points, key=lambda p: (
+                    sum(((p[i] - target[i]) / settings["pitch"][i]) ** 2 for i in (0, 1)), p))[:64]
+            return hints[target]
         for via in self.board.GetTracks():
             if not isinstance(via, pcbnew.PCB_VIA) or via.GetNetCode() != netcode:
                 continue
@@ -674,7 +704,8 @@ class ViaStitcherDialog(viastitcher_gui):
                 return keep_going
             return refill(self.fill_regions, index, origin, settings["pitch"],
                           settings["diameter"], settings["minimum"], settings["maximum"],
-                          self._place_via, stagger=stagger, progress=progress)
+                          self._place_via, stagger=stagger, progress=progress,
+                          candidate_hints=candidate_hints)
         finally:
             dialog.Destroy()
 
