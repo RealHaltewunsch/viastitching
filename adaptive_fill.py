@@ -4,6 +4,7 @@ Coordinates are board internal units. Spacing is measured in the metric
 hypot(dx / horizontal_pitch, dy / vertical_pitch), so rectangular grids work.
 """
 import math
+from itertools import islice
 import time
 from dataclasses import dataclass
 
@@ -170,16 +171,17 @@ class FillResult:
 
 def refill(regions, index, origin, pitch, diameter, minimum, maximum,
            place, stagger=False, progress=None, time_limit=10.0, candidate_limit=50000,
-           clock=time.monotonic):
+           clock=time.monotonic, candidate_hints=None):
     """Visit each island's grid cells. place(point) checks and commits a via.
 
-    The caller indexes pre-existing and first-pass vias. An empty island may
-    receive its first via without an upper-distance constraint. Physical
+    The caller indexes pre-existing and first-pass vias. An empty island or
+    an unreachable gap may receive a seed without a nearby neighbor. Physical
     collisions are always checked by place, including across different islands.
     """
     validate_settings(pitch, diameter, minimum, maximum)
     result = FillResult()
     visited = set()
+    outside = set()
     started = clock()
     last_progress = started - 1
 
@@ -212,7 +214,14 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
     # cannot steal space from an otherwise feasible nominal grid position.
     # Revisit deferred cells when new vias extend the reachable frontier.
     completed = set()
-    for nominal in (True, False):
+    # Share the search budget across the entire board before refining any
+    # individual cell. Exhausting 512 candidates in each early blocked cell
+    # used to starve narrow gaps later in the traversal.
+    for first, last in ((0, 0), (-1, -1), (0, 9), (9, 25), (25, 81), (81, 289), (289, 512)):
+        if last == -1 and candidate_hints is None:
+            continue
+        nominal = last == 0
+        seed_gaps = False
         while True:
             previous_count = result.added
             # Try unserved islands before expanding coverage on large planes.
@@ -232,7 +241,9 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                         continue
                     if stop():
                         return result
-                    if any(region_id in ids and d < minimum
+                    # Only discard a whole cell when even its farthest corner
+                    # is too close. A blocked center does not exclude offsets.
+                    if any(region_id in ids and d < minimum - math.sqrt(.5)
                            for d, ids in index.nearby(target, minimum)):
                         completed.add((region_id, target))
                         continue
@@ -240,23 +251,31 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                         distances = [d for d, ids in index.nearby(point, maximum)
                                      if region_id in ids]
                         return abs(min(distances) - 1) if distances else 0
-                    candidates = (target,) if nominal else local_candidates(
-                        target, region.bounds, pitch, diameter, spacing_error=spacing_error)
+                    if nominal:
+                        candidates = (target,)
+                    elif last == -1:
+                        candidates = candidate_hints(target)
+                    else:
+                        candidates = islice(local_candidates(
+                            target, region.bounds, pitch, diameter, spacing_error=spacing_error), first, last)
                     deferred = False
                     for point in candidates:
                         if stop():
                             return result
-                        result.examined += 1
-                        if point in visited:
+                        if point in visited or (region_id, point) in outside:
                             continue
+                        result.examined += 1
                         # Cheap spacing rejection before polygon/clearance checks.
                         neighbors = list(index.nearby(point, maximum))
                         if any(d < minimum for d, _ in neighbors):
+                            visited.add(point)
                             continue
-                        if region_id in index.covered and not any(region_id in ids for _, ids in neighbors):
+                        if (not seed_gaps and region_id in index.covered
+                                and not any(region_id in ids for _, ids in neighbors)):
                             deferred = True
                             continue
                         if not region.fits(point, diameter / 2):
+                            outside.add((region_id, point))
                             continue
                         # Failed physical candidates never become valid as vias are added.
                         visited.add(point)
@@ -266,11 +285,17 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                             result.added += 1
                             completed.add((region_id, target))
                             break
-                    if not nominal and not deferred:
+                    if last == 512 and not deferred:
                         # Geometry/physical failures cannot improve when more
                         # vias are added. Only retry cells awaiting a neighbor.
                         completed.add((region_id, target))
             if result.added == previous_count:
-                break
+                if seed_gaps:
+                    break
+                # Obstacles can disconnect feasible via positions even within
+                # one connected copper polygon. After extending all reachable
+                # neighbors, seed those gaps too; otherwise a distant via on
+                # the same plane prevents the entire gap from ever filling.
+                seed_gaps = True
     result.unserved = len(set(range(len(regions))) - index.covered)
     return result

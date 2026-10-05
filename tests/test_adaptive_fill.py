@@ -113,6 +113,34 @@ class AdaptiveFillTests(unittest.TestCase):
         self.assertEqual(result.added,5)
         self.assertIn((0,0),added)
 
+    def test_blocked_path_does_not_prevent_seeding_a_gap_on_same_plane(self):
+        region = rectangle(-100, -100, 8100, 2100)
+        result, added = self.run_fill([region], [((0, 0), [0])],
+                                     blocked=lambda p: p[0] < 5000)
+        self.assertGreater(result.added, 0)
+        self.assertTrue(any(p[0] >= 5000 for p in added))
+
+    def test_blocked_cells_do_not_exhaust_budget_before_later_offsets(self):
+        region = rectangle(-100, -100, 10100, 1100)
+        result, added = self.run_fill([region], candidate_limit=1000,
+            blocked=lambda p: not (9750 <= p[0] <= 10200 and 200 <= p[1] <= 400))
+        self.assertGreater(result.added, 0)
+
+    def test_nearby_via_does_not_discard_entire_offset_cell(self):
+        region = rectangle(-1000, -500, 500, 500)
+        result, added = self.run_fill([region], [((-700, 0), [0])],
+                                     blocked=lambda p: p[0] < 200)
+        self.assertGreater(result.added, 0)
+        self.assertTrue(any(p[0] >= 200 for p in added))
+
+    def test_geometry_hint_still_obeys_spacing_and_physical_checks(self):
+        region = rectangle(-100, -100, 5100, 1100)
+        hints = lambda target: [(target[0] + 123, target[1])]
+        result, added = self.run_fill([region], [((0, 0), [0])],
+            candidate_hints=hints, blocked=lambda p: p[0] != 3123)
+        self.assertGreater(result.added, 0)
+        self.assertTrue(all(p[0] == 3123 for p in added))
+
     def test_spacing_preference_breaks_equal_grid_distance_ties(self):
         candidates = list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100,
                                            spacing_error=lambda p: 0 if p[0] > 0 else 1))

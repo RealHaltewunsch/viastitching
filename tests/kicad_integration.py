@@ -221,6 +221,33 @@ def run(output):
     assert two_layer_refill.added > 0 and two_layer_refill.unserved == 0
     results['copper_modes'] = 'Two-layer acceptance, all-layer rejection, single-layer and obstacle rejection'
 
+    # Two foreign tracks leave only a 25 um placement window under the shared
+    # collision rules. Neither the nominal 1.5 mm grid nor coarse offsets hit
+    # it. Both copper planes are continuous: this is a gap, not a new island.
+    board, zone = board_fixture(); board.SetCopperLayerCount(4)
+    for x in (10.3, 11.775):
+        track = pcbnew.PCB_TRACK(board)
+        track.SetStart(point(x,3)); track.SetEnd(point(x,22))
+        track.SetWidth(mm(.15)); track.SetLayer(pcbnew.In1_Cu)
+        track.SetNetCode(board.GetNetcodeFromNetname('SIGNAL')); board.Add(track)
+    h = harness(board, zone)
+    h.m_chkAllCopperLayers.SetValue(False)
+    h.m_txtHSpacing.SetValue('1.5'); h.m_txtVSpacing.SetValue('1.5')
+    h._read_fill_settings(); h.FillupArea()
+    def corridor_vias():
+        return [v for v in vias(board) if mm(11.025) < v.GetPosition().x < mm(11.05)
+                and mm(5) < v.GetPosition().y < mm(20)]
+    assert not corridor_vias()
+    first = len(vias(board))
+    pcbnew.SaveBoard(str(output/'before_corridor.kicad_pcb'), board)
+    result = h._refill((0,0), False)
+    assert len(corridor_vias()) >= 8, (result, len(corridor_vias()))
+    assert len(h.pcb_group.GetItems()) == first + result.added
+    pcbnew.SaveBoard(str(output/'after_corridor.kicad_pcb'), board)
+    results['corridor'] = dict(grid=first, additional=result.added,
+                               corridor_vias=len(corridor_vias()))
+    h.ClearArea(); assert not vias(board)
+
     # Invalid settings must not name an unnamed zone, add a group, or save config.
     board,zone = board_fixture(); h = harness(board,zone)
     zone.SetZoneName('')
