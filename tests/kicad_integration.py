@@ -210,10 +210,15 @@ def run(output):
     board,zone = board_fixture(); board.SetCopperLayerCount(4)
     h = harness(board,zone)
     assert not h._place_via((mm(4),mm(4)))
+    strict_refill = h._refill((mm(4),mm(4)),False)
+    assert strict_refill.added == 0 and not vias(board)
     h.m_chkAllCopperLayers.SetValue(False)
     assert h._place_via((mm(4),mm(4)))
     assert not h.HasFilledCopperAt(point(4,4),[pcbnew.F_Cu],board.GetNetcodeFromNetname('GND'),mm(.3))
     assert not h._place_via((mm(12),mm(12)))
+    h.FillupArea()
+    two_layer_refill = h._refill((mm(4),mm(4)),False)
+    assert two_layer_refill.added > 0 and two_layer_refill.unserved == 0
     results['copper_modes'] = 'Two-layer acceptance, all-layer rejection, single-layer and obstacle rejection'
 
     # Invalid settings must not name an unnamed zone, add a group, or save config.
