@@ -1,7 +1,7 @@
 import math
 import unittest
 
-from adaptive_fill import Region, ViaIndex, local_candidates, refill, validate_settings
+from adaptive_fill import Region, ViaIndex, gap_candidates, capsule_section, refill, validate_settings
 
 
 def rectangle(x0, y0, x1, y1, layer=0, holes=None):
@@ -20,7 +20,9 @@ class AdaptiveFillTests(unittest.TestCase):
                 return False
             added.append(point)
             return True
-        result = refill(regions, index, origin, pitch, 100, .8, 1.5, place, **kwargs)
+        sections = kwargs.pop('blocked_sections',None)
+        result = refill(regions, index, origin, pitch, 100, .8, 1.5, place,
+                        blocked=sections, **kwargs)
         return result, added
 
     def test_regular_grid_does_not_get_denser(self):
@@ -47,7 +49,9 @@ class AdaptiveFillTests(unittest.TestCase):
     def test_obstructed_grid_point_gets_offset_candidate(self):
         region = rectangle(-100, -400, 2100, 400)
         blocked = lambda p: 900 < p[0] < 1100 and -100 < p[1] < 100
-        result, added = self.run_fill([region], [((0,0),[0]), ((2000,0),[0])], blocked=blocked)
+        result, added = self.run_fill([region], [((0,0),[0]), ((2000,0),[0])], blocked=blocked, blocked_sections=lambda axis,v:
+            [(900,1100)] if axis == 0 and abs(v)<100 else
+            [(-100,100)] if axis == 1 and 900<v<1100 else [])
         self.assertEqual(result.added, 1)
         self.assertNotEqual(added[0], (1000,0))
         self.assertFalse(blocked(added[0]))
@@ -95,12 +99,33 @@ class AdaptiveFillTests(unittest.TestCase):
         self.assertIn((200,100), a[1])
         self.assertIn((700,1100), a[1])
 
-    def test_candidate_search_is_bounded_and_reaches_fine_resolution(self):
-        points = list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100, limit=20000))
-        self.assertEqual(points[0],(0,0))
-        self.assertEqual(len(points),len(set(points)))
-        self.assertLessEqual(len(points),20000)
-        self.assertIn((10,10),points)
+    def test_capsule_sections_include_width_clearance_and_endcaps(self):
+        self.assertEqual(capsule_section((0,0),(0,1000),100,0,500),(-100,100))
+        self.assertEqual(capsule_section((0,0),(0,1000),100,1,0),(-100,1100))
+        self.assertEqual(capsule_section((0,0),(0,0),100,0,0),(-100,100))
+        self.assertIsNone(capsule_section((0,0),(0,1000),100,0,1200))
+        a,b = capsule_section((0,0),(1000,1000),100,0,500)
+        self.assertAlmostEqual(a,500-100*math.sqrt(2))
+        self.assertAlmostEqual(b,500+100*math.sqrt(2))
+
+    def test_different_track_widths_shift_free_interval_midpoint(self):
+        region = rectangle(0,0,3000,3000)
+        def obstacles(axis,value):
+            return [section for a,b,r in [((500,0),(500,3000),300),
+                                         ((2000,0),(2000,3000),600)]
+                    for section in [capsule_section(a,b,r,axis,value)] if section]
+        points = gap_candidates((1000,1000),region,(1000,1000),100,
+                                ViaIndex((1000,1000)),.8,obstacles)
+        self.assertIn((1100,1000),points)
+
+    def test_geometry_centers_very_narrow_window_without_refinement(self):
+        region = rectangle(0,0,3000,3000)
+        index = ViaIndex((1000,1000))
+        def obstacles(axis,value):
+            return [(0,1234),(1236,3000)] if axis == 0 else []
+        points = gap_candidates((1000,1000),region,(1000,1000),100,index,.8,obstacles)
+        self.assertIn((1235,1000),points)
+        self.assertLess(len(points),10)
 
     def test_large_distance_limit_does_not_enumerate_empty_buckets(self):
         index = ViaIndex((1000,1000))
@@ -120,12 +145,6 @@ class AdaptiveFillTests(unittest.TestCase):
         self.assertGreater(result.added, 0)
         self.assertTrue(any(p[0] >= 5000 for p in added))
 
-    def test_blocked_cells_do_not_exhaust_budget_before_later_offsets(self):
-        region = rectangle(-100, -100, 10100, 1100)
-        result, added = self.run_fill([region], candidate_limit=1000,
-            blocked=lambda p: not (9750 <= p[0] <= 10200 and 200 <= p[1] <= 400))
-        self.assertGreater(result.added, 0)
-
     def test_nearby_via_does_not_discard_entire_offset_cell(self):
         region = rectangle(-1000, -500, 500, 500)
         result, added = self.run_fill([region], [((-700, 0), [0])],
@@ -141,13 +160,7 @@ class AdaptiveFillTests(unittest.TestCase):
         self.assertGreater(result.added, 0)
         self.assertTrue(all(p[0] == 3123 for p in added))
 
-    def test_spacing_preference_breaks_equal_grid_distance_ties(self):
-        candidates = list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100,
-                                           spacing_error=lambda p: 0 if p[0] > 0 else 1))
-        self.assertLess(candidates.index((250,0)),candidates.index((-250,0)))
-
     def test_default_cell_and_total_search_budgets(self):
-        self.assertLessEqual(len(list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100))),512)
         result, _ = self.run_fill([rectangle(0,0,100000,100000)],
                                   blocked=lambda p: True, candidate_limit=100)
         self.assertTrue(result.limited)
@@ -156,9 +169,39 @@ class AdaptiveFillTests(unittest.TestCase):
     def test_time_limit_keeps_partial_result(self):
         ticks = iter([0,0,0,0,0,0,0,100])
         result, added = self.run_fill([rectangle(-100,-100,10000,10000)],
-                                      clock=lambda: next(ticks,100))
+                                      clock=lambda: next(ticks,100), time_limit=10)
         self.assertTrue(result.limited)
         self.assertEqual(result.added,len(added))
+
+    def test_default_search_finishes_without_global_timeout_or_candidate_cutoff(self):
+        ticks = iter([0])
+        result, _ = self.run_fill([rectangle(0,0,12000,12000)],
+            blocked=lambda p: True, clock=lambda: next(ticks,100))
+        self.assertFalse(result.limited)
+        self.assertGreater(result.examined,0)
+        self.assertLess(result.examined,5000)
+
+    def test_unconnected_existing_via_still_excludes_refill(self):
+        existing = [((500,500), []), ((900,500), [])]
+        result, added = self.run_fill([rectangle(-100,-100,2100,2100)],existing)
+        self.assertGreater(result.added,0)
+        all_points = [p for p,_ in existing]
+        for p in added:
+            self.assertTrue(all(math.hypot((p[0]-q[0])/1000,
+                                          (p[1]-q[1])/1000) >= .8 for q in all_points))
+            all_points.append(p)
+
+    def test_box_pruning_proves_union_coverage_and_preserves_free_center(self):
+        index = ViaIndex((2000,1000))
+        for p in [(0,0),(2000,0),(0,1000),(2000,1000)]:
+            index.add(p, [])
+        self.assertTrue(index.blocks_box((0,0,2000,1000),.8))
+        self.assertFalse(index.blocks_box((0,0,2000,1000),.6))
+
+    def test_exact_minimum_boundary_is_allowed(self):
+        index = ViaIndex((1000,1000)); index.add((0,0),[])
+        region = rectangle(790,-10,810,10)
+        self.assertFalse(index.blocks_box(region.bounds,.8))
 
     def test_indexed_geometry_matches_full_edge_scan(self):
         from adaptive_fill import point_in_ring, segment_distance
