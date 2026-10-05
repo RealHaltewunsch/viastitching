@@ -149,8 +149,8 @@ class ViaStitcherDialog(viastitcher_gui):
         )
         self.m_txtClearance.SetValue(defaults.get("Clearance", "0"))
         self.m_cbFillStyle.SetSelection(self._get_fill_style_index(defaults))
-        self.m_chkOnlyFilledCopper.SetValue(
-            defaults.get("OnlyFilledCopper", True)
+        self.m_chkAllCopperLayers.SetValue(
+            defaults.get("RequireAllCopperLayers", defaults.get("OnlyFilledCopper", False))
         )
 
         self.m_chkAdaptiveFill.SetValue(defaults.get("AdaptiveFill", False))
@@ -539,22 +539,29 @@ class ViaStitcherDialog(viastitcher_gui):
         """Return whether the selected net has filled copper around a via."""
 
         zones = [zone for zone in self.board.Zones() if zone.GetNetCode() == netcode]
+        required = len(layers) if self.m_chkAllCopperLayers.GetValue() else 2
         by_layer = [(layer, [zone for zone in zones if layer in zone.GetLayerSet().Seq()])
                     for layer in layers]
-        # Check every layer's center before spending 32 boundary samples on
-        # another layer. A missing layer rejects the candidate immediately.
-        if not all(any(zone.HitTestFilledArea(layer, position, 0) for zone in candidates)
-                   for layer, candidates in by_layer):
+        # Reject missing layers before spending boundary samples on other layers.
+        candidates = [(layer, zones) for layer, zones in by_layer
+                      if any(zone.HitTestFilledArea(layer, position, 0) for zone in zones)]
+        if len(candidates) < required:
             return False
-        for sample_index in range(32):
-            angle = 2 * math.pi * sample_index / 32
-            sample = self._point((position.x + radius * math.cos(angle),
-                                  position.y + radius * math.sin(angle)))
-            if not all(any(zone.HitTestFilledArea(layer, sample, 0) for zone in candidates)
-                       for layer, candidates in by_layer):
-                return False
+        samples = [self._point((position.x + radius * math.cos(i * math.pi / 16),
+                                position.y + radius * math.sin(i * math.pi / 16)))
+                   for i in range(32)]
+        connected = 0
+        for layer, zones in candidates:
+            if all(any(zone.HitTestFilledArea(layer, sample, 0) for zone in zones)
+                   for sample in samples):
+                connected += 1
+                if connected >= required:
+                    return True
+        return False
 
-        return True
+    def _copper_layers(self):
+        return [layer for layer in self.board.GetEnabledLayers().Seq()
+                if pcbnew.IsCopperLayer(layer)]
 
     def onAdaptiveFillChanged(self, event=None):
         enabled = self.m_chkAdaptiveFill.GetValue()
@@ -614,16 +621,16 @@ class ViaStitcherDialog(viastitcher_gui):
         settings = self.fill_settings
         p = self._point(position)
         layer_set = self.area.GetLayerSet()
-        layers = list(layer_set.Seq())
+        layers = self._copper_layers()
         netcode = self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection())
-        if not any(self.area.HitTestFilledArea(layer, p, 0) for layer in layers):
+        if not any(self.area.HitTestFilledArea(layer, p, 0) for layer in layer_set.Seq()):
             return False
-        if self.m_chkOnlyFilledCopper.GetValue() and not self.HasFilledCopperAt(
+        if not self.HasFilledCopperAt(
                 p, layers, netcode, settings["diameter"] / 2):
             return False
         via = pcbnew.PCB_VIA(self.board)
         via.SetPosition(p)
-        via.SetLayerSet(layer_set)
+        via.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
         via.SetNetCode(netcode)
         if hasattr(via, "SetIsFree"):
             via.SetIsFree(True)
@@ -645,11 +652,14 @@ class ViaStitcherDialog(viastitcher_gui):
         settings = self.fill_settings
         index = ViaIndex(settings["pitch"])
         netcode = self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection())
-        required_layers = set(self.area.GetLayerSet().Seq())
+        required_layers = set(self._copper_layers())
         for via in self.board.GetTracks():
             if not isinstance(via, pcbnew.PCB_VIA) or via.GetNetCode() != netcode:
                 continue
-            if not required_layers.issubset(set(via.GetLayerSet().Seq())):
+            spanned = required_layers.intersection(via.GetLayerSet().Seq())
+            if self.m_chkAllCopperLayers.GetValue() and not required_layers.issubset(spanned):
+                continue
+            if not self.HasFilledCopperAt(via.GetPosition(), sorted(spanned), netcode, _via_width(via) / 2):
                 continue
             point = (via.GetPosition().x, via.GetPosition().y)
             touched = [i for i, region in enumerate(self.fill_regions)
@@ -786,7 +796,7 @@ class ViaStitcherDialog(viastitcher_gui):
             "VOffset": self.m_txtVOffset.GetValue(),
             "Clearance": self.m_txtClearance.GetValue(),
             "FillStyle": self._get_fill_style(),
-            "OnlyFilledCopper": self.m_chkOnlyFilledCopper.GetValue(),
+            "RequireAllCopperLayers": self.m_chkAllCopperLayers.GetValue(),
             "AdaptiveFill": self.m_chkAdaptiveFill.GetValue(),
             "MinSpacingPercent": self.m_txtMinSpacing.GetValue(),
             "MaxSpacingPercent": self.m_txtMaxSpacing.GetValue(),

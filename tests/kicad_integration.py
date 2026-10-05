@@ -137,7 +137,7 @@ class Harness:
     pass
 
 for name in dir(Dialog):
-    if name.startswith('_') and name not in ('_read_fill_settings','_filled_regions','_point','_place_via','_get_fill_style','_refill'):
+    if name.startswith('_') and name not in ('_read_fill_settings','_filled_regions','_point','_place_via','_get_fill_style','_refill','_copper_layers'):
         continue
     value = getattr(Dialog,name)
     if callable(value):
@@ -156,7 +156,7 @@ def harness(board, zone, adaptive=False, style=0):
     h.Destroy = lambda: None
     controls = dict(m_txtViaSize='.6',m_txtViaDrillSize='.3',m_txtHSpacing='4',m_txtVSpacing='4',
                     m_txtHOffset='0',m_txtVOffset='0',m_txtClearance='0',m_cbNet='GND',
-                    m_chkOnlyFilledCopper=True,m_cbFillStyle=style,m_chkAdaptiveFill=adaptive,
+                    m_chkAllCopperLayers=True,m_cbFillStyle=style,m_chkAdaptiveFill=adaptive,
                     m_txtMinSpacing='80',m_txtMaxSpacing='150',m_chkClearOwn=True)
     for name,value in controls.items(): setattr(h,name,Control(value))
     h._read_fill_settings()
@@ -205,6 +205,17 @@ def run(output):
         h.ClearArea()
         assert len(vias(board)) == 0
 
+    # A four-layer board with GND only on F/B must accept two-layer mode,
+    # reject all-layer mode, and never accept a single copper connection.
+    board,zone = board_fixture(); board.SetCopperLayerCount(4)
+    h = harness(board,zone)
+    assert not h._place_via((mm(4),mm(4)))
+    h.m_chkAllCopperLayers.SetValue(False)
+    assert h._place_via((mm(4),mm(4)))
+    assert not h.HasFilledCopperAt(point(4,4),[pcbnew.F_Cu],board.GetNetcodeFromNetname('GND'),mm(.3))
+    assert not h._place_via((mm(12),mm(12)))
+    results['copper_modes'] = 'Two-layer acceptance, all-layer rejection, single-layer and obstacle rejection'
+
     # Invalid settings must not name an unnamed zone, add a group, or save config.
     board,zone = board_fixture(); h = harness(board,zone)
     zone.SetZoneName('')
@@ -215,6 +226,7 @@ def run(output):
     # Only same-net vias spanning the selected layer set count as coverage.
     h.m_txtHSpacing.SetValue('4'); h._read_fill_settings()
     board.SetCopperLayerCount(4)
+    h.m_chkAllCopperLayers.SetValue(False)
     for net,top,bottom,xy in [('GND',pcbnew.F_Cu,pcbnew.B_Cu,(31,11)),
                               ('SIGNAL',pcbnew.F_Cu,pcbnew.B_Cu,(8,8)),
                               ('GND',pcbnew.F_Cu,pcbnew.In1_Cu,(20,20))]:

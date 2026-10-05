@@ -180,9 +180,8 @@ class viastitcher_gui ( wx.Dialog ):
 
 		bSizer1.Add( fgAdaptive, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.m_chkOnlyFilledCopper = wx.CheckBox( self, wx.ID_ANY, _(u"Only place vias connecting selected net copper on multiple layers"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_chkOnlyFilledCopper.SetValue(True)
-		bSizer1.Add( self.m_chkOnlyFilledCopper, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_LEFT|wx.ALL|wx.EXPAND|wx.LEFT, 5 )
+		self.m_chkAllCopperLayers = wx.CheckBox( self, wx.ID_ANY, _(u"Require copper connection on all layers (off: at least two)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer1.Add( self.m_chkAllCopperLayers, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_LEFT|wx.ALL|wx.EXPAND|wx.LEFT, 5 )
 
 		self.m_chkClearOwn = wx.CheckBox( self, wx.ID_ANY, _(u"Clear only plugin placed vias"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_chkClearOwn.SetValue(True)

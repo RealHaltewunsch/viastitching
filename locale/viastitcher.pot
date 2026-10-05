@@ -170,3 +170,6 @@ msgstr ""
 
 msgid "Search limit reached. Partial results kept; some areas may remain unfilled."
 msgstr ""
+
+msgid "Require copper connection on all layers (off: at least two)"
+msgstr ""

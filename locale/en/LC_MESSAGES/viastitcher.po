@@ -170,3 +170,6 @@ msgstr "Additional vias: {vias}\nPositions checked: {checked}"
 
 msgid "Search limit reached. Partial results kept; some areas may remain unfilled."
 msgstr "Search limit reached. Partial results kept; some areas may remain unfilled."
+
+msgid "Require copper connection on all layers (off: at least two)"
+msgstr "Require copper connection on all layers (off: at least two)"
