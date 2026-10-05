@@ -165,3 +165,9 @@ msgstr "Questa versione di KiCad non può leggere i poligoni di rame riempiti. D
 
 msgid "Fill the selected copper zone before using refill."
 msgstr "Riempire la zona di rame selezionata prima di usare il riempimento aggiuntivo."
+
+msgid "Additional vias: {vias}\nPositions checked: {checked}"
+msgstr "Via aggiuntivi: {vias}\nPosizioni controllate: {checked}"
+
+msgid "Search limit reached. Partial results kept; some areas may remain unfilled."
+msgstr "Limite di ricerca raggiunto. Risultati parziali mantenuti; alcune aree potrebbero restare vuote."

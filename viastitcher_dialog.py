@@ -538,26 +538,20 @@ class ViaStitcherDialog(viastitcher_gui):
     def HasFilledCopperAt(self, position, layers, netcode, radius):
         """Return whether the selected net has filled copper around a via."""
 
-        samples = [position]
-        for index in range(32):
-            angle = 2 * math.pi * index / 32
-            sample_x = int(position.x + radius * math.cos(angle))
-            sample_y = int(position.y + radius * math.sin(angle))
-            if hasattr(pcbnew, "VECTOR2I"):
-                samples.append(pcbnew.VECTOR2I(sample_x, sample_y))
-            else:
-                samples.append(pcbnew.wxPoint(sample_x, sample_y))
-
         zones = [zone for zone in self.board.Zones() if zone.GetNetCode() == netcode]
-        for layer in layers:
-            if not all(
-                any(
-                    zone.HitTestFilledArea(layer, sample, 0)
-                    for zone in zones
-                    if layer in set(zone.GetLayerSet().Seq())
-                )
-                for sample in samples
-            ):
+        by_layer = [(layer, [zone for zone in zones if layer in zone.GetLayerSet().Seq()])
+                    for layer in layers]
+        # Check every layer's center before spending 32 boundary samples on
+        # another layer. A missing layer rejects the candidate immediately.
+        if not all(any(zone.HitTestFilledArea(layer, position, 0) for zone in candidates)
+                   for layer, candidates in by_layer):
+            return False
+        for sample_index in range(32):
+            angle = 2 * math.pi * sample_index / 32
+            sample = self._point((position.x + radius * math.cos(angle),
+                                  position.y + radius * math.sin(angle)))
+            if not all(any(zone.HitTestFilledArea(layer, sample, 0) for zone in candidates)
+                       for layer, candidates in by_layer):
                 return False
 
         return True
@@ -665,8 +659,8 @@ class ViaStitcherDialog(viastitcher_gui):
             _("Searching for additional via positions..."), parent=self,
             style=wx.PD_APP_MODAL | wx.PD_CAN_ABORT | wx.PD_ELAPSED_TIME)
         try:
-            def progress(added):
-                keep_going, _skip = dialog.Pulse(_("Additional vias: %d") % added)
+            def progress(added, examined):
+                keep_going, _skip = dialog.Pulse(_("Additional vias: {vias}\nPositions checked: {checked}").format(vias=added, checked=examined))
                 return keep_going
             return refill(self.fill_regions, index, origin, settings["pitch"],
                           settings["diameter"], settings["minimum"], settings["maximum"],
@@ -740,6 +734,8 @@ class ViaStitcherDialog(viastitcher_gui):
             result = self._refill((x_start, y_start), stagger)
             message = _("Grid vias: {grid}\nAdditional vias: {extra}\nUnserved copper islands (per layer): {unserved}").format(
                 grid=viacount, extra=result.added, unserved=result.unserved)
+            if result.limited:
+                message += "\n" + _("Search limit reached. Partial results kept; some areas may remain unfilled.")
             if result.cancelled:
                 message += "\n" + _("Refill stopped. Vias already placed have been kept.")
             wx.MessageBox(message)

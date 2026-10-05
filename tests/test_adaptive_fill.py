@@ -84,7 +84,7 @@ class AdaptiveFillTests(unittest.TestCase):
         result, added = self.run_fill([rectangle(0,0,1000,1000)], blocked=lambda p: True)
         self.assertEqual(result.unserved,1)
         self.assertFalse(added)
-        result, _ = self.run_fill([rectangle(0,0,1000,1000)], progress=lambda count: False)
+        result, _ = self.run_fill([rectangle(0,0,1000,1000)], progress=lambda count, examined: False)
         self.assertTrue(result.cancelled)
 
     def test_stagger_and_offset_are_deterministic(self):
@@ -96,7 +96,7 @@ class AdaptiveFillTests(unittest.TestCase):
         self.assertIn((700,1100), a[1])
 
     def test_candidate_search_is_bounded_and_reaches_fine_resolution(self):
-        points = list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100))
+        points = list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100, limit=20000))
         self.assertEqual(points[0],(0,0))
         self.assertEqual(len(points),len(set(points)))
         self.assertLessEqual(len(points),20000)
@@ -117,6 +117,47 @@ class AdaptiveFillTests(unittest.TestCase):
         candidates = list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100,
                                            spacing_error=lambda p: 0 if p[0] > 0 else 1))
         self.assertLess(candidates.index((250,0)),candidates.index((-250,0)))
+
+    def test_default_cell_and_total_search_budgets(self):
+        self.assertLessEqual(len(list(local_candidates((0,0),(-500,-500,500,500),(1000,1000),100))),512)
+        result, _ = self.run_fill([rectangle(0,0,100000,100000)],
+                                  blocked=lambda p: True, candidate_limit=100)
+        self.assertTrue(result.limited)
+        self.assertEqual(result.examined,100)
+
+    def test_time_limit_keeps_partial_result(self):
+        ticks = iter([0,0,0,0,0,0,0,100])
+        result, added = self.run_fill([rectangle(-100,-100,10000,10000)],
+                                      clock=lambda: next(ticks,100))
+        self.assertTrue(result.limited)
+        self.assertEqual(result.added,len(added))
+
+    def test_indexed_geometry_matches_full_edge_scan(self):
+        from adaptive_fill import point_in_ring, segment_distance
+        import random
+        count = 4000
+        ring = [(int(10000*math.cos(i*2*math.pi/count)),int(10000*math.sin(i*2*math.pi/count)))
+                for i in range(count)]
+        holes = [[(-500,-500),(500,-500),(500,500),(-500,500)]]
+        region = Region(0,ring,holes)
+        rng = random.Random(123)
+        for _ in range(150):
+            p = (rng.randrange(-11000,11000),rng.randrange(-11000,11000))
+            radius = rng.randrange(1,500)
+            expected = point_in_ring(p,ring) and not point_in_ring(p,holes[0]) and all(
+                segment_distance(p,a,b)>=radius for r in [ring]+holes
+                for a,b in zip(r,r[1:]+r[:1]))
+            self.assertEqual(region.fits(p,radius),expected)
+
+    def test_interior_disk_does_not_scan_all_polygon_edges(self):
+        from unittest.mock import patch
+        from adaptive_fill import segment_distance
+        ring = [(int(10000*math.cos(i*2*math.pi/10000)),int(10000*math.sin(i*2*math.pi/10000)))
+                for i in range(10000)]
+        region = Region(0,ring,[])
+        with patch('adaptive_fill.segment_distance',wraps=segment_distance) as distance:
+            self.assertTrue(region.fits((0,0),100))
+            self.assertLess(distance.call_count,10)
 
     def test_invalid_settings(self):
         for pitch, size, low, high in [((0,1000),100,.8,1.5), ((1000,1000),100,1.1,1.5),

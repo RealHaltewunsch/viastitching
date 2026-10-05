@@ -4,6 +4,7 @@ Coordinates are board internal units. Spacing is measured in the metric
 hypot(dx / horizontal_pitch, dy / vertical_pitch), so rectangular grids work.
 """
 import math
+import time
 from dataclasses import dataclass
 
 
@@ -33,19 +34,51 @@ class Region:
     def __post_init__(self):
         xs, ys = zip(*self.outline)
         self.bounds = (min(xs), min(ys), max(xs), max(ys))
+        # Index edges by Y band once. Detailed zones can contain tens of
+        # thousands of vertices; scanning every edge per candidate is quadratic.
+        self.edges = [(a, b) for ring in [self.outline] + self.holes
+                      for a, b in zip(ring, ring[1:] + ring[:1])]
+        count = min(256, max(1, int(math.sqrt(len(self.edges))) * 2))
+        self.band_height = max(1, (self.bounds[3] - self.bounds[1]) / count)
+        self.bands = [[] for _ in range(count)]
+        for i, (a, b) in enumerate(self.edges):
+            for band in range(self._band(min(a[1], b[1])), self._band(max(a[1], b[1])) + 1):
+                self.bands[band].append(i)
+
+    def _band(self, y):
+        return max(0, min(len(self.bands) - 1,
+                          int((y - self.bounds[1]) / self.band_height)))
 
     def contains(self, point):
+        x, y = point
         left, top, right, bottom = self.bounds
-        return (left <= point[0] <= right and top <= point[1] <= bottom
-                and point_in_ring(point, self.outline)
-                and not any(point_in_ring(point, hole) for hole in self.holes))
+        if not (left <= x <= right and top <= y <= bottom):
+            return False
+        inside = False
+        for i in self.bands[self._band(y)]:
+            a, b = self.edges[i]
+            if (a[1] > y) != (b[1] > y):
+                if x < (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]) + a[0]:
+                    inside = not inside
+        return inside
+
+    def nearby_edges(self, point, radius):
+        x, y = point
+        seen = set()
+        for band in range(self._band(y - radius), self._band(y + radius) + 1):
+            for i in self.bands[band]:
+                if i in seen:
+                    continue
+                seen.add(i)
+                a, b = self.edges[i]
+                if (max(a[0], b[0]) >= x - radius and min(a[0], b[0]) <= x + radius
+                        and max(a[1], b[1]) >= y - radius and min(a[1], b[1]) <= y + radius):
+                    yield a, b
 
     def fits(self, point, radius):
-        if not self.contains(point):
-            return False
-        return all(segment_distance(point, a, b) >= radius
-                   for ring in [self.outline] + self.holes
-                   for a, b in zip(ring, ring[1:] + ring[:1]))
+        return self.contains(point) and all(
+            segment_distance(point, a, b) >= radius
+            for a, b in self.nearby_edges(point, radius))
 
 
 class ViaIndex:
@@ -86,7 +119,7 @@ def validate_settings(pitch, diameter, minimum, maximum):
         raise ValueError("Distance limits must include 100% of the grid spacing")
 
 
-def local_candidates(target, bounds, pitch, diameter, limit=20000, spacing_error=None):
+def local_candidates(target, bounds, pitch, diameter, limit=512, spacing_error=None):
     """Search one clipped grid cell, coarse to fine, preferring the grid point.
 
     Quantize to integer board units, remove duplicate candidates, and cap work
@@ -131,10 +164,13 @@ class FillResult:
     added: int = 0
     unserved: int = 0
     cancelled: bool = False
+    limited: bool = False
+    examined: int = 0
 
 
 def refill(regions, index, origin, pitch, diameter, minimum, maximum,
-           place, stagger=False, progress=None):
+           place, stagger=False, progress=None, time_limit=10.0, candidate_limit=50000,
+           clock=time.monotonic):
     """Visit each island's grid cells. place(point) checks and commits a via.
 
     The caller indexes pre-existing and first-pass vias. An empty island may
@@ -144,7 +180,23 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
     validate_settings(pitch, diameter, minimum, maximum)
     result = FillResult()
     visited = set()
-    attempts = 0
+    started = clock()
+    last_progress = started - 1
+
+    def stop():
+        nonlocal last_progress
+        now = clock()
+        if progress and now - last_progress >= 0.1:
+            last_progress = now
+            if not progress(result.added, result.examined):
+                result.cancelled = True
+        if now - started >= time_limit or result.examined >= candidate_limit:
+            result.limited = True
+        if result.cancelled or result.limited:
+            result.unserved = len(set(range(len(regions))) - index.covered)
+            return True
+        return False
+
     def cells(region):
         left, top, right, bottom = region.bounds
         y0 = math.ceil((top - origin[1]) / pitch[1] - 0.5)
@@ -163,14 +215,22 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
     for nominal in (True, False):
         while True:
             previous_count = result.added
-            for region_id, region in enumerate(regions):
+            # Try unserved islands before expanding coverage on large planes.
+            order = sorted(range(len(regions)), key=lambda i: (
+                i in index.covered,
+                (regions[i].bounds[2] - regions[i].bounds[0]) *
+                (regions[i].bounds[3] - regions[i].bounds[1]), i))
+            for region_id in order:
+                region = regions[region_id]
+                if stop():
+                    return result
+                left, top, right, bottom = region.bounds
+                if right - left < diameter or bottom - top < diameter:
+                    continue
                 for target in cells(region):
                     if (region_id, target) in completed:
                         continue
-                    attempts += 1
-                    if progress and attempts % 256 == 1 and not progress(result.added):
-                        result.cancelled = True
-                        result.unserved = len(set(range(len(regions))) - index.covered)
+                    if stop():
                         return result
                     if any(region_id in ids and d < minimum
                            for d, ids in index.nearby(target, minimum)):
@@ -182,18 +242,21 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                         return abs(min(distances) - 1) if distances else 0
                     candidates = (target,) if nominal else local_candidates(
                         target, region.bounds, pitch, diameter, spacing_error=spacing_error)
+                    deferred = False
                     for point in candidates:
-                        attempts += 1
-                        if progress and attempts % 256 == 1 and not progress(result.added):
-                            result.cancelled = True
-                            result.unserved = len(set(range(len(regions))) - index.covered)
+                        if stop():
                             return result
-                        if point in visited or not region.fits(point, diameter / 2):
+                        result.examined += 1
+                        if point in visited:
                             continue
+                        # Cheap spacing rejection before polygon/clearance checks.
                         neighbors = list(index.nearby(point, maximum))
                         if any(d < minimum for d, _ in neighbors):
                             continue
                         if region_id in index.covered and not any(region_id in ids for _, ids in neighbors):
+                            deferred = True
+                            continue
+                        if not region.fits(point, diameter / 2):
                             continue
                         # Failed physical candidates never become valid as vias are added.
                         visited.add(point)
@@ -203,6 +266,10 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                             result.added += 1
                             completed.add((region_id, target))
                             break
+                    if not nominal and not deferred:
+                        # Geometry/physical failures cannot improve when more
+                        # vias are added. Only retry cells awaiting a neighbor.
+                        completed.add((region_id, target))
             if result.added == previous_count:
                 break
     result.unserved = len(set(range(len(regions))) - index.covered)
