@@ -147,6 +147,52 @@ class viastitcher_gui ( wx.Dialog ):
 
 		bSizer1 = wx.BoxSizer( wx.VERTICAL )
 
+		self.m_chkSparse = wx.CheckBox( self, wx.ID_ANY, _(u"Thin grid in empty areas"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_chkSparse.SetToolTip( _(u"Reduce density far from tracks and pads; zone fills and vias do not affect proximity.") )
+
+		bSizer1.Add( self.m_chkSparse, 0, wx.ALL|wx.EXPAND, 5 )
+
+		fgDensity = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgDensity.AddGrowableCol( 1 )
+		fgDensity.SetFlexibleDirection( wx.BOTH )
+		fgDensity.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_lblDensityStart = wx.StaticText( self, wx.ID_ANY, _(u"Start thinning at distance (%)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblDensityStart.Wrap( -1 )
+
+		fgDensity.Add( self.m_lblDensityStart, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtDensityStart = wx.TextCtrl( self, wx.ID_ANY, _(u"100"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtDensityStart.Enable( False )
+		self.m_txtDensityStart.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgDensity.Add( self.m_txtDensityStart, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_lblDensityEnd = wx.StaticText( self, wx.ID_ANY, _(u"Full thinning at distance (%)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblDensityEnd.Wrap( -1 )
+
+		fgDensity.Add( self.m_lblDensityEnd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtDensityEnd = wx.TextCtrl( self, wx.ID_ANY, _(u"300"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtDensityEnd.Enable( False )
+		self.m_txtDensityEnd.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgDensity.Add( self.m_txtDensityEnd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_lblDensityMultiple = wx.StaticText( self, wx.ID_ANY, _(u"Maximum grid multiple"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblDensityMultiple.Wrap( -1 )
+
+		fgDensity.Add( self.m_lblDensityMultiple, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtDensityMultiple = wx.TextCtrl( self, wx.ID_ANY, _(u"3"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtDensityMultiple.Enable( False )
+		self.m_txtDensityMultiple.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgDensity.Add( self.m_txtDensityMultiple, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		bSizer1.Add( fgDensity, 0, wx.ALL|wx.EXPAND, 5 )
+
 		self.m_chkAdaptiveFill = wx.CheckBox( self, wx.ID_ANY, _(u"Refill islands and gaps"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_chkAdaptiveFill.SetToolTip( _(u"After the grid pass, try nearby positions in unserved copper islands and gaps.") )
 

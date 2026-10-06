@@ -13,6 +13,7 @@ import math
 
 from .viastitcher_gui import viastitcher_gui
 from .localization import _
+from .density_field import board_density, validate_density, DensityViaIndex, ordered_candidates
 from .adaptive_fill import Region, ViaIndex, refill, validate_settings, capsule_section
 
 numpy_available = False
@@ -24,7 +25,7 @@ except Exception:
     from math import sqrt, pow
 import json
 
-__version__ = "0.3.4"
+__version__ = "0.3.9"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.
@@ -158,6 +159,13 @@ class ViaStitcherDialog(viastitcher_gui):
         self.m_txtMaxSpacing.SetValue(str(defaults.get("MaxSpacingPercent", "150")))
         self.m_chkAdaptiveFill.Bind(wx.EVT_CHECKBOX, self.onAdaptiveFillChanged)
         self.onAdaptiveFillChanged()
+        self.m_chkSparse.SetValue(defaults.get("SparseGrid", False))
+        for name,key,default in (("DensityStart","DensityStartPercent","100"),
+                                 ("DensityEnd","DensityEndPercent","300"),
+                                 ("DensityMultiple","DensityMultiple","3")):
+            getattr(self,"m_txt"+name).SetValue(str(defaults.get(key,default)))
+        self.m_chkSparse.Bind(wx.EVT_CHECKBOX,self.onSparseChanged)
+        self.onSparseChanged()
 
         # Get default Vias dimensions
         via_size = None
@@ -568,6 +576,10 @@ class ViaStitcherDialog(viastitcher_gui):
         self.m_txtMinSpacing.Enable(enabled)
         self.m_txtMaxSpacing.Enable(enabled)
 
+    def onSparseChanged(self, event=None):
+        for name in ("DensityStart","DensityEnd","DensityMultiple"):
+            getattr(self,"m_txt"+name).Enable(self.m_chkSparse.GetValue())
+
     def _read_fill_settings(self):
         """Validate everything before assigning a zone name or writing config."""
         def number(control):
@@ -587,6 +599,12 @@ class ViaStitcherDialog(viastitcher_gui):
             "adaptive": self.m_chkAdaptiveFill.GetValue(),
         }
         settings = self.fill_settings
+        settings["sparse"] = self.m_chkSparse.GetValue()
+        settings["density_start"] = number(self.m_txtDensityStart)/100 if settings["sparse"] else 1
+        settings["density_end"] = number(self.m_txtDensityEnd)/100 if settings["sparse"] else 3
+        settings["density_multiple"] = number(self.m_txtDensityMultiple) if settings["sparse"] else 3
+        validate_density(settings["density_start"],settings["density_end"],settings["density_multiple"])
+        self.density = None
         settings["minimum"] = number(self.m_txtMinSpacing) / 100 if settings["adaptive"] else 0.8
         settings["maximum"] = number(self.m_txtMaxSpacing) / 100 if settings["adaptive"] else 1.5
         validate_settings(settings["pitch"], settings["diameter"],
@@ -650,7 +668,7 @@ class ViaStitcherDialog(viastitcher_gui):
 
     def _refill(self, origin, stagger):
         settings = self.fill_settings
-        index = ViaIndex(settings["pitch"])
+        index = DensityViaIndex(self.density) if self.density else ViaIndex(settings["pitch"])
         netcode = self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection())
         required_layers = set(self._copper_layers())
         # Build configuration-space obstacles once: positions forbidden to a
@@ -707,7 +725,7 @@ class ViaStitcherDialog(viastitcher_gui):
             return refill(self.fill_regions, index, origin, settings["pitch"],
                           settings["diameter"], settings["minimum"], settings["maximum"],
                           self._place_via, stagger=stagger, progress=progress,
-                          blocked=blocked)
+                          blocked=blocked, density=self.density)
         finally:
             dialog.Destroy()
 
@@ -715,6 +733,10 @@ class ViaStitcherDialog(viastitcher_gui):
         """Fills selected area with vias."""
 
         settings = self.fill_settings
+        if settings["sparse"] and self.density is None:
+            self.density = board_density(self.board,settings["pitch"],settings["density_start"],
+                                         settings["density_end"],settings["density_multiple"])
+        candidates = []
         viasize = settings["diameter"]
         step_x, step_y = settings["pitch"]
         offset_x, offset_y = settings["offset"]
@@ -759,6 +781,7 @@ class ViaStitcherDialog(viastitcher_gui):
                 row_x_offset = step_x // 2
             
             x = x_start + row_x_offset
+            col_index = 0
             while x <= eff_right:
                 if self.randomize:
                     xp = x + random.uniform(-1, 1) * step_x / 5
@@ -767,12 +790,34 @@ class ViaStitcherDialog(viastitcher_gui):
                     xp = x
                     yp = y
 
-                if self._place_via((xp, yp)):
+                if self.density:
+                    candidates.append((row_index,col_index,(xp,yp)))
+                elif self._place_via((xp, yp)):
                     viacount += 1
+                col_index += 1
                 x += step_x
             y += step_y
             row_index += 1
 
+        if self.density:
+            accepted = DensityViaIndex(self.density)
+            dialog = wx.ProgressDialog(_("Thin grid in empty areas"),_("Searching for additional via positions..."),
+                parent=self,style=wx.PD_APP_MODAL|wx.PD_CAN_ABORT|wx.PD_ELAPSED_TIME)
+            cancelled = False
+            try:
+                for n,(near,point) in enumerate(ordered_candidates(candidates,self.density)):
+                    if n % 32 == 0 and not dialog.Pulse(_("Implanted: %d vias!") % viacount)[0]:
+                        cancelled = True; break
+                    if not near and any(d < 1 for d,_ in accepted.nearby(point,1)):
+                        continue
+                    if self._place_via(point):
+                        accepted.add(point,[]); viacount += 1
+            finally:
+                dialog.Destroy()
+            if cancelled:
+                wx.MessageBox(_("Refill stopped. Vias already placed have been kept."))
+                pcbnew.Refresh()
+                return
         if settings["adaptive"]:
             result = self._refill((x_start, y_start), stagger)
             message = _("Grid vias: {grid}\nAdditional vias: {extra}\nUnserved copper islands (per layer): {unserved}").format(
@@ -793,7 +838,7 @@ class ViaStitcherDialog(viastitcher_gui):
         try:
             self._read_fill_settings()
         except (ValueError, OverflowError):
-            wx.MessageBox(_("Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, and distance limits with 0 < minimum <= 100 <= maximum."))
+            wx.MessageBox(_("Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances 0 <= start < end with an integer multiple >= 1."))
             return
         if self.fill_settings["adaptive"]:
             try:
@@ -831,6 +876,10 @@ class ViaStitcherDialog(viastitcher_gui):
             "FillStyle": self._get_fill_style(),
             "RequireAllCopperLayers": self.m_chkAllCopperLayers.GetValue(),
             "AdaptiveFill": self.m_chkAdaptiveFill.GetValue(),
+            "SparseGrid": self.m_chkSparse.GetValue(),
+            "DensityStartPercent": self.m_txtDensityStart.GetValue(),
+            "DensityEndPercent": self.m_txtDensityEnd.GetValue(),
+            "DensityMultiple": self.m_txtDensityMultiple.GetValue(),
             "MinSpacingPercent": self.m_txtMinSpacing.GetValue(),
             "MaxSpacingPercent": self.m_txtMaxSpacing.GetValue(),
         }

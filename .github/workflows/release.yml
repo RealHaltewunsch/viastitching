@@ -57,6 +57,7 @@ jobs:
             __init__.py \
             defaults.json \
             adaptive_fill.py \
+            density_field.py \
             localization.py \
             viastitcher.png \
             viastitcher_dialog.py \

@@ -70,6 +70,33 @@ ViaStitcher checks pads, tracks, vias, footprint zones, board edges, and items b
 
 Use **Clear** to remove matching vias from the selected zone. With **Clear only plugin placed vias** enabled, only vias belonging to that zone's ViaStitcher group are removed. Disable it to remove any via matching the selected net, size, and drill values inside the zone.
 
+## Optional thinning in empty areas
+
+Enable **Thin grid in empty areas** to reduce drilling away from tracks, arcs
+and pads. All nets and enabled copper layers count. Filled zones, vias and
+component outlines do not influence the proximity field.
+
+**Start thinning at distance (%)** defaults to 100; **Full thinning at distance
+(%)** defaults to 300; **Maximum grid multiple** defaults to 3 (an integer).
+Distances use the normalized horizontal/vertical pitch. With a 1.5 mm square
+base grid, the pitch stays unchanged within 1.5 mm of copper, the target grows
+linearly to 4.5 mm at a distance of 4.5 mm, and remains at that target farther
+away. Existing grid positions are thinned, not moved: actual spacing therefore
+changes in discrete steps. Pattern, offset and raster phase remain applicable.
+Curved copper outlines are polygonized with at most 0.001 mm error (or one
+thousandth of the smaller pitch, whichever is smaller), outside the contour.
+
+Refill shares this fixed proximity field. Its percentage limits apply to the
+local target pitch; each new via must respect the larger local factor of both
+members of a pair. Thus refill does not restore the dense grid in intentionally
+sparse areas. Existing same-net vias remain spacing obstacles even though they
+are not proximity references. This option never deletes existing vias: use
+**Clear only plugin placed vias** first if replacing an earlier dense pattern.
+
+Thinning defaults to disabled and its settings are saved per zone. This is a
+geometric drilling-density heuristic, not a current-flow or signal-integrity
+analysis. It does not change the shared physical placement checks.
+
 ## Optional island and gap refill
 
 Enable **Refill islands and gaps** to run a second pass after the selected grid

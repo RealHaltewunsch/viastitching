@@ -19,9 +19,9 @@
   },
   "versions": [
     {
-      "version": "0.3.4",
+      "version": "0.3.9",
       "version_epoch": 0,
-      "status": "stable",
+      "status": "testing",
       "kicad_version": "6.0",
       "runtime": "swig"
     }

@@ -173,3 +173,21 @@ msgstr ""
 
 msgid "Require copper connection on all layers (off: at least two)"
 msgstr ""
+
+msgid "Thin grid in empty areas"
+msgstr ""
+
+msgid "Reduce density far from tracks and pads; zone fills and vias do not affect proximity."
+msgstr ""
+
+msgid "Start thinning at distance (%)"
+msgstr ""
+
+msgid "Full thinning at distance (%)"
+msgstr ""
+
+msgid "Maximum grid multiple"
+msgstr ""
+
+msgid "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances 0 <= start < end with an integer multiple >= 1."
+msgstr ""

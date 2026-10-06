@@ -9,11 +9,12 @@ import sys
 
 root = Path(sys.argv[1])
 cli = os.environ.get('KICAD_CLI') or shutil.which('kicad-cli') or '/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli'
-for style in (0,1,2,'corridor'):
+styles = [0,1,2] + (['corridor'] if (root/'before_corridor.kicad_pcb').exists() else [])
+for style in styles:
     reports = []
     for stage in ('before','after'):
         stem = root / ('%s_%s' % (stage,style))
-        subprocess.run([cli,'pcb','drc','--refill-zones','--format','json','-o',
+        subprocess.run([cli,'pcb','drc','--refill-zones','--all-track-errors','--format','json','-o',
                         str(stem.with_suffix('.json')),str(stem.with_suffix('.kicad_pcb'))],check=True)
         reports.append(json.loads(stem.with_suffix('.json').read_text()))
     before,after = reports

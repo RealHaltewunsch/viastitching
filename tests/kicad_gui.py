@@ -13,6 +13,11 @@ zone.SetSelected()
 with patch.object(pcbnew,'GetBoard',lambda:board), patch.object(pcbnew,'GetUserUnits',lambda:1):
     dialog = Dialog(board)
     assert dialog.initialized
+    assert not dialog.m_chkSparse.GetValue()
+    assert dialog.m_txtDensityStart.GetValue() == '100'
+    assert not dialog.m_txtDensityStart.IsEnabled()
+    dialog.m_chkSparse.SetValue(True); dialog.onSparseChanged()
+    assert dialog.m_txtDensityStart.IsEnabled()
     assert not dialog.m_chkAdaptiveFill.GetValue()
     assert not dialog.m_chkAllCopperLayers.GetValue()
     assert dialog.m_txtMinSpacing.GetValue() == '80'
@@ -22,7 +27,9 @@ with patch.object(pcbnew,'GetBoard',lambda:board), patch.object(pcbnew,'GetUserU
     dialog.onAdaptiveFillChanged()
     assert dialog.m_txtMinSpacing.IsEnabled()
     dialog.Layout()
-    controls = [dialog.m_chkAdaptiveFill,dialog.m_lblAdaptiveLimits,
+    controls = [dialog.m_chkSparse,dialog.m_lblDensityStart,dialog.m_txtDensityStart,
+                dialog.m_lblDensityEnd,dialog.m_txtDensityEnd,dialog.m_lblDensityMultiple,dialog.m_txtDensityMultiple,
+                dialog.m_chkAdaptiveFill,dialog.m_lblAdaptiveLimits,
                 dialog.m_txtMinSpacing,dialog.m_txtMaxSpacing,
                 dialog.m_chkAllCopperLayers,dialog.m_chkClearOwn,
                 dialog.m_btnOk,dialog.m_btnCancel,dialog.m_btnClear]
@@ -49,8 +56,13 @@ with patch.object(pcbnew,'GetBoard',lambda:board), patch.object(pcbnew,'GetUserU
     assert old.m_chkAllCopperLayers.GetValue()
     old.Destroy()
     config.SetText(json.dumps({'ViaStitcher':'0.3.4','adaptive_fixture':{
+        'SparseGrid':True,'DensityStartPercent':'125','DensityEndPercent':'400','DensityMultiple':'4',
         'AdaptiveFill':True,'RequireAllCopperLayers':False,'MinSpacingPercent':'90','MaxSpacingPercent':'125'}}))
     saved = Dialog(board)
+    assert saved.m_chkSparse.GetValue()
+    assert saved.m_txtDensityStart.GetValue()=='125'
+    assert saved.m_txtDensityEnd.GetValue()=='400'
+    assert saved.m_txtDensityMultiple.GetValue()=='4'
     assert saved.m_chkAdaptiveFill.GetValue()
     assert not saved.m_chkAllCopperLayers.GetValue()
     assert saved.m_txtMinSpacing.IsEnabled()

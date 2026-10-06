@@ -148,7 +148,7 @@ def harness(board, zone, adaptive=False, style=0):
     h = Harness()
     h.board, h.area, h.net = board, zone, 'GND'
     h.FromUserUnit = pcbnew.FromMM
-    h.board_edges = list(board.GetDrawings())
+    h.board_edges = [d for d in board.GetDrawings() if d.GetLayer() == pcbnew.Edge_Cuts]
     h.viagroupname = 'VIA_STITCHING_GROUPadaptive_fixture'
     h.pcb_group = pcbnew.PCB_GROUP(board)
     h.pcb_group.SetName(h.viagroupname); board.Add(h.pcb_group)
@@ -156,6 +156,7 @@ def harness(board, zone, adaptive=False, style=0):
     h.Destroy = lambda: None
     controls = dict(m_txtViaSize='.6',m_txtViaDrillSize='.3',m_txtHSpacing='4',m_txtVSpacing='4',
                     m_txtHOffset='0',m_txtVOffset='0',m_txtClearance='0',m_cbNet='GND',
+                    m_chkSparse=False,m_txtDensityStart='100',m_txtDensityEnd='300',m_txtDensityMultiple='3',
                     m_chkAllCopperLayers=True,m_cbFillStyle=style,m_chkAdaptiveFill=adaptive,
                     m_txtMinSpacing='80',m_txtMaxSpacing='150',m_chkClearOwn=True)
     for name,value in controls.items(): setattr(h,name,Control(value))

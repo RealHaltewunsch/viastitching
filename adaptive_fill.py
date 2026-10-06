@@ -194,10 +194,15 @@ def gap_candidates(target, region, pitch, diameter, index, minimum, blocked=None
                      if max(a+radius,low[axis]) <= min(b-radius,high[axis])]
         exclusions = list(blocked(axis,value)) if blocked else []
         center = list(target); center[other] = value
-        for point,_ in index.nearby_points(center, minimum+1):
-            delta = (point[other]-value)/pitch[other]
-            if abs(delta)<minimum:
-                extent = pitch[axis]*math.sqrt(minimum**2-delta**2)
+        field = getattr(index,"field",None)
+        reach = minimum*(field.multiple if field else 1) + max(pitch[i]/index.pitch[i] for i in (0,1))
+        for point,_ in index.nearby_points(center,reach):
+            # The existing via radius is a safe lower bound for the symmetric
+            # variable-spacing exclusion; exact candidate checks follow.
+            bound = minimum*(field.factor(point) if field else 1)
+            delta = (point[other]-value)/index.pitch[other]
+            if abs(delta)<bound:
+                extent = index.pitch[axis]*math.sqrt(bound**2-delta**2)
                 exclusions.append((point[axis]-extent,point[axis]+extent))
         for a,b in sorted(exclusions):
             remaining = []
@@ -236,7 +241,7 @@ class FillResult:
 
 def refill(regions, index, origin, pitch, diameter, minimum, maximum,
            place, stagger=False, progress=None, time_limit=None, candidate_limit=None,
-           clock=time.monotonic, candidate_hints=None, blocked=None):
+           clock=time.monotonic, candidate_hints=None, blocked=None, density=None):
     """Visit each island's grid cells. place(point) checks and commits a via.
 
     The caller indexes pre-existing and first-pass vias. An empty island or
@@ -305,10 +310,11 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                         return result
                     # Discard a cell only when its whole area is proven covered
                     # by spacing exclusions, never just because corners fail.
-                    bounds = (max(left, target[0]-pitch[0]/2),
-                              max(top, target[1]-pitch[1]/2),
-                              min(right, target[0]+pitch[0]/2),
-                              min(bottom, target[1]+pitch[1]/2))
+                    local_pitch = tuple(v*density.factor(target) for v in pitch) if density else pitch
+                    bounds = (max(left, target[0]-local_pitch[0]/2),
+                              max(top, target[1]-local_pitch[1]/2),
+                              min(right, target[0]+local_pitch[0]/2),
+                              min(bottom, target[1]+local_pitch[1]/2))
                     if index.blocks_box(bounds, minimum):
                         completed.add((region_id, target))
                         continue
@@ -318,7 +324,7 @@ def refill(regions, index, origin, pitch, diameter, minimum, maximum,
                     if nominal:
                         candidates = (target,)
                     else:
-                        suggestions = gap_candidates(target, region, pitch, diameter,
+                        suggestions = gap_candidates(target, region, local_pitch, diameter,
                                                      index, minimum, blocked)
                         if candidate_hints:
                             suggestions = set(suggestions).union(candidate_hints(target))
