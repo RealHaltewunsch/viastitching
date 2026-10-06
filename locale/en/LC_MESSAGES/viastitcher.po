@@ -131,3 +131,78 @@ msgstr "&Cancel"
 #: .\viastitcher_gui.py:185
 msgid "C&lear"
 msgstr "C&lear"
+
+msgid " (computing)"
+msgstr " (computing)"
+
+msgid " (drawing limited to 20,000 candidates)"
+msgstr " (drawing limited to 20,000 candidates)"
+
+msgid "0.35"
+msgstr "0.35"
+
+msgid "1"
+msgstr "1"
+
+msgid "Accepted: {a} | Edge: {e} | Collision: {c}\nCopper: {f} | Spacing: {s}"
+msgstr "Accepted: {a} | Edge: {e} | Collision: {c}\nCopper: {f} | Spacing: {s}"
+
+msgid "Additional clearance from conflicting objects. Zero does not disable collision checks."
+msgstr "Additional clearance from conflicting objects. Zero does not disable collision checks."
+
+msgid "Additional margin from zone and board boundaries. Zero still keeps the full via inside."
+msgstr "Additional margin from zone and board boundaries. Zero still keeps the full via inside."
+
+msgid "Center each usable row segment"
+msgstr "Center each usable row segment"
+
+msgid "Center-to-center distance used by Maximize; independent of Grid spacing."
+msgstr "Center-to-center distance used by Maximize; independent of Grid spacing."
+
+msgid "Computing candidates..."
+msgstr "Computing candidates..."
+
+msgid "Computing preview..."
+msgstr "Computing preview..."
+
+msgid "Edge clearance"
+msgstr "Edge clearance"
+
+msgid "Enter finite positive spacing and via sizes, drill smaller than diameter, and non-negative clearance."
+msgstr "Enter finite positive spacing and via sizes, drill smaller than diameter, and non-negative clearance."
+
+msgid "Enter valid placement parameters to preview."
+msgstr "Enter valid placement parameters to preview."
+
+msgid "Grid and Stagger only. Preserves row spacing and Y offset; replaces X offset and stagger phase with per-segment centering."
+msgstr "Grid and Stagger only. Preserves row spacing and Y offset; replaces X offset and stagger phase with per-segment centering."
+
+msgid "Live placement preview"
+msgstr "Live placement preview"
+
+msgid "Maximize"
+msgstr "Maximize"
+
+msgid "Minimum via spacing"
+msgstr "Minimum via spacing"
+
+msgid "Object clearance"
+msgstr "Object clearance"
+
+msgid "Placed: %d vias"
+msgstr "Placed: %d vias"
+
+msgid "Preview disabled"
+msgstr "Preview disabled"
+
+msgid "Preview unavailable; placement remains available."
+msgstr "Preview unavailable; placement remains available."
+
+msgid "Spiral"
+msgstr "Spiral"
+
+msgid "Via placement"
+msgstr "Via placement"
+
+msgid "{0} v{1} (development)"
+msgstr "{0} v{1} (development)"

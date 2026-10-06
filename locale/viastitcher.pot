@@ -131,3 +131,81 @@ msgstr ""
 #: .\viastitcher_gui.py:185
 msgid "C&lear"
 msgstr ""
+
+msgid " (computing)"
+msgstr ""
+
+msgid " (drawing limited to 20,000 candidates)"
+msgstr ""
+
+msgid "0.35"
+msgstr ""
+
+msgid "1"
+msgstr ""
+
+msgid "Accepted: {a} | Edge: {e} | Collision: {c}\nCopper: {f} | Spacing: {s}"
+msgstr ""
+
+msgid "Additional clearance from conflicting objects. Zero does not disable collision checks."
+msgstr ""
+
+msgid "Additional margin from zone and board boundaries. Zero still keeps the full via inside."
+msgstr ""
+
+msgid "Center each usable row segment"
+msgstr ""
+
+msgid "Center-to-center distance used by Maximize; independent of Grid spacing."
+msgstr ""
+
+msgid "Computing candidates..."
+msgstr ""
+
+msgid "Computing preview..."
+msgstr ""
+
+msgid "Edge clearance"
+msgstr ""
+
+msgid "Enter finite positive spacing and via sizes, drill smaller than diameter, and non-negative clearance."
+msgstr ""
+
+msgid "Enter valid placement parameters to preview."
+msgstr ""
+
+msgid "Grid and Stagger only. Preserves row spacing and Y offset; replaces X offset and stagger phase with per-segment centering."
+msgstr ""
+
+msgid "Live placement preview"
+msgstr ""
+
+msgid "Maximize"
+msgstr ""
+
+msgid "Minimum via spacing"
+msgstr ""
+
+msgid "Object clearance"
+msgstr ""
+
+msgid "Only place vias connecting selected net copper on multiple layers"
+msgstr ""
+
+msgid "Placed: %d vias"
+msgstr ""
+
+msgid "Preview disabled"
+msgstr ""
+
+msgid "Preview unavailable; placement remains available."
+msgstr ""
+
+msgid "Spiral"
+msgstr ""
+
+msgid "Via placement"
+msgstr ""
+
+msgid "{0} v{1} (development)"
+msgstr ""

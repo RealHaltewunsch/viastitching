@@ -17,7 +17,7 @@ from unittest.mock import patch
 import pcbnew
 import wx
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get('VIASTITCHER_TEST_ROOT', str(Path(__file__).resolve().parents[1])))
 pkg = types.ModuleType('viastitcher_test_package')
 pkg.__path__ = [str(ROOT)]
 sys.modules[pkg.__name__] = pkg
@@ -131,6 +131,12 @@ class Control:
     def SetValue(self, value): self.value = value
 
 
+class Progress:
+    def __init__(self,*a,**k):pass
+    def Pulse(self,*a,**k):return True,False
+    def Destroy(self):pass
+
+
 class Harness:
     def Destroy(self): pass
 
@@ -140,10 +146,10 @@ for name,value in vars(Dialog).items():
 
 def harness(board,zone):
     h=Harness();h.board=board;h.area=zone;h.net='GND';h.FromUserUnit=mm
-    for name,value in dict(m_txtViaSize='.6',m_txtViaDrillSize='.3',m_txtHSpacing='3',m_txtVSpacing='3',m_txtHOffset='0',m_txtVOffset='0',m_txtClearance='0',m_cbFillStyle=0,m_cbNet='GND',m_chkOnlyFilledCopper=True).items():setattr(h,name,Control(value))
+    for name,value in dict(m_txtViaSize='.6',m_txtViaDrillSize='.3',m_txtHSpacing='3',m_txtVSpacing='3',m_txtHOffset='0',m_txtVOffset='0',m_txtClearance='0',m_cbFillStyle=0,m_cbNet='GND',m_chkOnlyFilledCopper=True,m_txtObjectClearance='.35',m_txtMinDistance='1.5',m_chkCenterSegments=False,m_chkClearOwn=True).items():setattr(h,name,Control(value))
     h.board_edges=[x for x in board.GetDrawings() if x.GetLayer()==pcbnew.Edge_Cuts]
     h.pcb_group=pcbnew.PCB_GROUP(board);h.pcb_group.SetName('test');board.Add(h.pcb_group)
-    h.GetOverlappingItems();return h
+    h.viagroupname='test';h._random_seed=17;h.GetOverlappingItems();return h
 
 
 def positions(board):
@@ -170,8 +176,10 @@ def run():
                 if original:
                     import types as bind
                     h.FillupArea=bind.MethodType(old.FillupArea,h)
+                    for name in ('CheckOverlap','CheckClearance','HasFilledCopperAt'):
+                        setattr(h,name,bind.MethodType(getattr(old,name),h))
                 random.seed(17)
-                with patch.object(wx,'MessageBox',lambda *a,**k:None),patch.object(pcbnew,'Refresh',lambda:None):h.FillupArea()
+                with patch.object(wx,'MessageBox',lambda *a,**k:None),patch.object(pcbnew,'Refresh',lambda:None),patch.object(wx,'ProgressDialog',Progress):h.FillupArea()
                 results.append(positions(b))
             assert results[0]==results[1],(style,len(results[0]),len(results[1]),set(results[0])^set(results[1]))
             print('Exact native upstream comparison:',style,len(results[1]),'PASS')

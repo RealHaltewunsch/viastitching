@@ -132,3 +132,78 @@ msgstr "&Annulla"
 #: .\viastitcher_gui.py:185
 msgid "C&lear"
 msgstr "&Pulisci"
+
+msgid " (computing)"
+msgstr " (calcolo in corso)"
+
+msgid " (drawing limited to 20,000 candidates)"
+msgstr " (visualizzazione limitata a 20.000 candidati)"
+
+msgid "0.35"
+msgstr "0.35"
+
+msgid "1"
+msgstr "1"
+
+msgid "Accepted: {a} | Edge: {e} | Collision: {c}\nCopper: {f} | Spacing: {s}"
+msgstr "Accettati: {a} | Bordo: {e} | Collisione: {c}\nRame: {f} | Distanza: {s}"
+
+msgid "Additional clearance from conflicting objects. Zero does not disable collision checks."
+msgstr "Distanza aggiuntiva dagli oggetti in conflitto. Zero non disabilita il controllo delle collisioni."
+
+msgid "Additional margin from zone and board boundaries. Zero still keeps the full via inside."
+msgstr "Margine aggiuntivo dai bordi della zona e della scheda. Anche con zero il via resta interamente dentro."
+
+msgid "Center each usable row segment"
+msgstr "Centra ogni segmento utilizzabile della riga"
+
+msgid "Center-to-center distance used by Maximize; independent of Grid spacing."
+msgstr "Distanza tra i centri usata da Massimizza, indipendente dal passo della griglia."
+
+msgid "Computing candidates..."
+msgstr "Calcolo dei candidati..."
+
+msgid "Computing preview..."
+msgstr "Calcolo dell’anteprima..."
+
+msgid "Edge clearance"
+msgstr "Distanza dal bordo"
+
+msgid "Enter finite positive spacing and via sizes, drill smaller than diameter, and non-negative clearance."
+msgstr "Inserire valori finiti e positivi per passo e dimensioni del via, foro minore del diametro e distanze non negative."
+
+msgid "Enter valid placement parameters to preview."
+msgstr "Inserire parametri validi per l’anteprima."
+
+msgid "Grid and Stagger only. Preserves row spacing and Y offset; replaces X offset and stagger phase with per-segment centering."
+msgstr "Solo griglia e sfalsato. Mantiene il passo delle righe e lo scostamento Y; sostituisce lo scostamento X e lo sfalsamento con la centratura dei segmenti."
+
+msgid "Live placement preview"
+msgstr "Anteprima interattiva del posizionamento"
+
+msgid "Maximize"
+msgstr "Massimizza"
+
+msgid "Minimum via spacing"
+msgstr "Distanza minima tra via"
+
+msgid "Object clearance"
+msgstr "Distanza dagli oggetti"
+
+msgid "Placed: %d vias"
+msgstr "Posizionati: %d via"
+
+msgid "Preview disabled"
+msgstr "Anteprima disabilitata"
+
+msgid "Preview unavailable; placement remains available."
+msgstr "Anteprima non disponibile; il posizionamento rimane disponibile."
+
+msgid "Spiral"
+msgstr "Spirale"
+
+msgid "Via placement"
+msgstr "Posizionamento dei via"
+
+msgid "{0} v{1} (development)"
+msgstr "{0} v{1} (sviluppo)"

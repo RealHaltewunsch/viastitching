@@ -67,7 +67,7 @@ class EngineTests(unittest.TestCase):
                          [(4,4),(8,4),(6,8)])
 
 
-if __name__ == '__main__': unittest.main()
+
 
 class NewModeTests(unittest.TestCase):
     def test_spiral_center_order_and_spacing(self):
@@ -96,3 +96,16 @@ class NewModeTests(unittest.TestCase):
         self.assertEqual(list(m.centered_segment(10,21,4)),[12,16,20])
         self.assertEqual(list(m.centered_segment(30,30,4)),[30])
         self.assertEqual(list(m.centered_segment(31,30,4)),[])
+
+
+class BoundsTests(unittest.TestCase):
+    def test_negative_large_and_duplicate_bounds(self):
+        index=m.BoundsIndex(10)
+        near,far,large=object(),object(),object()
+        index.add((-12,-12,2,2),near)
+        index.add((500,500,501,501),far)
+        index.add((-1000,-1000,1000,1000),large)
+        self.assertEqual(set(index.query((-1,-1,1,1))),{near,large})
+        self.assertEqual(set(index.query((-2000,-2000,2000,2000))),{near,far,large})
+
+if __name__ == '__main__': unittest.main()

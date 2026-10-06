@@ -1,5 +1,10 @@
 # ViaStitcher
 
+**Development branch:** [User Manual](docs/wiki/Home.md) · [0.4.0 implementation and release gates](docs/roadmap-040.md)
+
+This checkout contains unreleased roadmap work based on upstream 0.3.4. The adaptive density/refill experiments are not included.
+
+
 Via stitching action plugin for KiCad 6.0 and newer.
 
 Fill a selected copper area with a pattern of vias.
@@ -46,14 +51,16 @@ python locale_setup.py
 
 Select a filled copper zone and start **Tools → External Plugins → ViaStitcher**, or use the ![ViaStitcher icon](viastitcher.png?raw=true) toolbar button. The following dialog opens:
 
-![ViaStitcher dialog](pictures/viastitcher_dialog.png?raw=true "ViaStitcher dialog")
+![Development dialog with placement preview](pictures/roadmap-preview.png "Unreleased 0.4.0 development dialog")
 
 The zone net is selected automatically, but another net can be chosen when needed. The dialog provides:
 
 - via diameter and drill diameter, initialized from the board settings;
 - vertical and horizontal spacing;
 - vertical and horizontal grid offsets;
-- clearance from the zone boundary and board edges (`0` disables the additional clearance check);
+- separate Edge and Object clearances (zero keeps geometric checks active);
+- live read-only preview with accepted/rejected counts;
+- Spiral and Maximize modes plus optional Grid/Stagger segment centering;
 - optional randomized placement;
 - **Only place vias that connect filled copper of the selected net on multiple layers**.
 
@@ -75,15 +82,15 @@ Use **Clear** to remove matching vias from the selected zone. With **Clear only 
 Some features still to code:
 - [x] Match user units (mm/inches).
 - [x] Add clear area function.
-- [ ] Draw a better UI (if anyone is willing to contribute please read the following section).
-- [x] Collision between new vias and underlying objects: 
-   - [x] tracks, 
+- [x] Mode-aware controls and placement preview (development branch).
+- [x] Collision between new vias and underlying objects:
+   - [x] tracks,
    - [x] zones,
    - [x] pads,
    - [x] footprint zones,
    - [x] modules,
    - [x] vias.
-- [ ] Different fillup patterns/modes (bounding box, centered spiral).
+- [x] Centered spiral and Maximize placement (development branch).
 - [x] Avoid placing vias near area edges (define clearance).
 - [ ] History management (board commit).
 - [x] Localization (English and Italian).

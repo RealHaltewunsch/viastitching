@@ -24,7 +24,7 @@ class Grid:
             raise ValueError('Via diameter and spacing must be positive')
         if self.bounds[0] > self.bounds[2] or self.bounds[1] > self.bounds[3]:
             raise ValueError('Invalid placement bounds')
-        if self.style not in ('Standard', 'Stagger', 'Randomize'):
+        if self.style not in ('Standard', 'Stagger', 'Randomize', 'Spiral', 'Maximize'):
             raise ValueError('Unknown grid style')
 
 
@@ -76,10 +76,10 @@ def evaluate_candidates(candidates, validate):
 
 
 def spiral_candidates(bounds, pitch, center=None):
-    """Concentric Archimedean-style rings, ordered from the center outwards.
+    """Archimedean spiral with unit turn spacing in normalized coordinates.
 
-    Ring spacing is one normalized grid unit; chord spacing within each ring
-    is at least one unit. Unequal X/Y spacing scales the circles to ellipses.
+    The common separation index rejects locally crowded proposals; the radius
+    grows monotonically and each complete turn advances one normalized unit.
     """
     left, top, right, bottom = bounds
     sx, sy = pitch
@@ -87,15 +87,15 @@ def spiral_candidates(bounds, pitch, center=None):
         raise ValueError('Invalid spiral geometry')
     cx, cy = center if center is not None else ((left+right)/2,(top+bottom)/2)
     yield int(cx), int(cy)
-    maximum = math.ceil(max(math.hypot((x-cx)/sx,(y-cy)/sy)
-                            for x in (left,right) for y in (top,bottom)))
-    for radius in range(1, maximum+1):
-        count = max(1, math.floor(math.pi/math.asin(1/(2*radius))))
-        for i in range(count):
-            angle = 2*math.pi*i/count + radius*math.pi*(3-math.sqrt(5))
-            x,y = cx+sx*radius*math.cos(angle), cy+sy*radius*math.sin(angle)
-            if left <= x <= right and top <= y <= bottom:
-                yield int(x),int(y)
+    maximum = max(math.hypot((x-cx)/sx,(y-cy)/sy)
+                  for x in (left,right) for y in (top,bottom))
+    angle = 2*math.pi
+    while angle/(2*math.pi) <= maximum:
+        radius = angle/(2*math.pi)
+        x,y = cx+sx*radius*math.cos(angle), cy+sy*radius*math.sin(angle)
+        if left <= x <= right and top <= y <= bottom:
+            yield int(x),int(y)
+        angle += 2*math.asin(min(1,1/(2*radius)))
 
 
 def packing_candidates(bounds, separation):
@@ -150,3 +150,33 @@ def centered_segment(left, right, spacing):
     start=(left+right-(count-1)*spacing)/2
     for i in range(count):
         yield int(round(start+i*spacing))
+
+
+class BoundsIndex:
+    """Conservative broad-phase index; very large boxes use a shared list."""
+    def __init__(self, cell_size):
+        self.cell_size=cell_size
+        self.cells={};self.large=[]
+
+    def _cells(self,bounds):
+        a,b,c,d=(math.floor(v/self.cell_size) for v in bounds)
+        return a,b,c,d
+
+    def add(self, bounds, item):
+        a,b,c,d=self._cells(bounds)
+        if (c-a+1)*(d-b+1)>256:
+            self.large.append(item);return
+        for x in range(a,c+1):
+            for y in range(b,d+1):self.cells.setdefault((x,y),[]).append(item)
+
+    def query(self,bounds):
+        a,b,c,d=self._cells(bounds)
+        found={id(item):item for item in self.large}
+        if (c-a+1)*(d-b+1)>4096:
+            for bucket in self.cells.values():
+                found.update((id(item),item) for item in bucket)
+        else:
+            for x in range(a,c+1):
+                for y in range(b,d+1):
+                    found.update((id(item),item) for item in self.cells.get((x,y),()))
+        return found.values()

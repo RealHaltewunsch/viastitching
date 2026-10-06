@@ -20,11 +20,13 @@ _ = gettext.gettext
 class viastitcher_gui ( wx.Dialog ):
 
 	def __init__( self, parent ):
-		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Via Stitcher"), pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.DEFAULT_DIALOG_STYLE )
+		wx.Dialog.__init__ ( self, parent, id = wx.ID_ANY, title = _(u"Via Stitcher"), pos = wx.DefaultPosition, size = wx.Size( -1,-1 ), style = wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER )
 
 		self.SetSizeHints( wx.DefaultSize, wx.DefaultSize )
 
-		bMainSizer = wx.BoxSizer( wx.VERTICAL )
+		bMainSizer = wx.BoxSizer( wx.HORIZONTAL )
+
+		bControls = wx.BoxSizer( wx.VERTICAL )
 
 		fgSizer1 = wx.FlexGridSizer( 0, 4, 0, 0 )
 		fgSizer1.AddGrowableCol( 0 )
@@ -36,7 +38,7 @@ class viastitcher_gui ( wx.Dialog ):
 
 		fgSizer1.Add( self.m_lblStyle, 0, wx.ALL|wx.EXPAND, 5 )
 
-		m_cbFillStyleChoices = [ _(u"Standard"), _(u"Stagger"), _(u"Randomize") ]
+		m_cbFillStyleChoices = [ _(u"Standard"), _(u"Stagger"), _(u"Randomize"), _(u"Spiral"), _(u"Maximize") ]
 		self.m_cbFillStyle = wx.ComboBox( self, wx.ID_ANY, _(u"Standard"), wx.DefaultPosition, wx.DefaultSize, m_cbFillStyleChoices, wx.CB_READONLY )
 		fgSizer1.Add( self.m_cbFillStyle, 0, wx.ALL|wx.EXPAND, 5 )
 
@@ -49,7 +51,7 @@ class viastitcher_gui ( wx.Dialog ):
 		self.m_lblNetName = wx.StaticText( self, wx.ID_ANY, _(u"Net name"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblNetName.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblNetName, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblNetName, 0, wx.ALL|wx.EXPAND, 5 )
 
 		m_cbNetChoices = []
 		self.m_cbNet = wx.ComboBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, m_cbNetChoices, wx.CB_DROPDOWN|wx.CB_READONLY|wx.CB_SORT )
@@ -64,72 +66,73 @@ class viastitcher_gui ( wx.Dialog ):
 		self.m_lblViaParams = wx.StaticText( self, wx.ID_ANY, _(u"Size / drill"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblViaParams.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblViaParams, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblViaParams, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtViaSize = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_txtViaSize.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtViaSize, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtViaSize, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtViaDrillSize = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_txtViaDrillSize.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtViaDrillSize, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtViaDrillSize, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_lblUnit1 = wx.StaticText( self, wx.ID_ANY, _(u"mm"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblUnit1.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblUnit1, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblUnit1, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_lblSpacing = wx.StaticText( self, wx.ID_ANY, _(u"Spacing (V/H)"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblSpacing.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblSpacing, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblSpacing, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtVSpacing = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_txtVSpacing.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtVSpacing, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtVSpacing, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtHSpacing = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_txtHSpacing.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtHSpacing, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtHSpacing, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_lblUnit2 = wx.StaticText( self, wx.ID_ANY, _(u"mm"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblUnit2.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblUnit2, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblUnit2, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_lblOffset = wx.StaticText( self, wx.ID_ANY, _(u"Offset (V/H)"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblOffset.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblOffset, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblOffset, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtVOffset = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_txtVOffset.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtVOffset, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtVOffset, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtHOffset = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_txtHOffset.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtHOffset, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtHOffset, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_lblUnit3 = wx.StaticText( self, wx.ID_ANY, _(u"mm"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblUnit3.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblUnit3, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblUnit3, 0, wx.ALL|wx.EXPAND, 5 )
 
-		self.m_lblClearance = wx.StaticText( self, wx.ID_ANY, _(u"Clearance"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblClearance = wx.StaticText( self, wx.ID_ANY, _(u"Edge clearance"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblClearance.Wrap( -1 )
 
-		fgSizer1.Add( self.m_lblClearance, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblClearance, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtClearance = wx.TextCtrl( self, wx.ID_ANY, _(u"0"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtClearance.SetToolTip( _(u"Additional margin from zone and board boundaries. Zero still keeps the full via inside.") )
 		self.m_txtClearance.SetMinSize( wx.Size( 120,-1 ) )
 
-		fgSizer1.Add( self.m_txtClearance, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_txtClearance, 0, wx.ALL|wx.EXPAND, 5 )
 
 
 		fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
@@ -139,27 +142,73 @@ class viastitcher_gui ( wx.Dialog ):
 
 		fgSizer1.Add( self.m_lblUnit4, 0, wx.ALL|wx.EXPAND, 5 )
 
+		self.m_lblObjectClearance = wx.StaticText( self, wx.ID_ANY, _(u"Object clearance"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblObjectClearance.Wrap( -1 )
 
-		bMainSizer.Add( fgSizer1, 1, wx.EXPAND, 5 )
+		fgSizer1.Add( self.m_lblObjectClearance, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtObjectClearance = wx.TextCtrl( self, wx.ID_ANY, _(u"0.35"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtObjectClearance.SetToolTip( _(u"Additional clearance from conflicting objects. Zero does not disable collision checks.") )
+		self.m_txtObjectClearance.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgSizer1.Add( self.m_txtObjectClearance, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		fgSizer1.Add( ( 0, 0), 0, wx.EXPAND, 5 )
+
+		self.m_lblUnit5 = wx.StaticText( self, wx.ID_ANY, _(u"mm"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblUnit5.Wrap( -1 )
+
+		fgSizer1.Add( self.m_lblUnit5, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_lblMinDistance = wx.StaticText( self, wx.ID_ANY, _(u"Minimum via spacing"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblMinDistance.Wrap( -1 )
+
+		fgSizer1.Add( self.m_lblMinDistance, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtMinDistance = wx.TextCtrl( self, wx.ID_ANY, _(u"1"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtMinDistance.SetToolTip( _(u"Center-to-center distance used by Maximize; independent of Grid spacing.") )
+		self.m_txtMinDistance.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgSizer1.Add( self.m_txtMinDistance, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		fgSizer1.Add( ( 0, 0), 0, wx.EXPAND, 5 )
+
+		self.m_lblUnit6 = wx.StaticText( self, wx.ID_ANY, _(u"mm"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblUnit6.Wrap( -1 )
+
+		fgSizer1.Add( self.m_lblUnit6, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		bControls.Add( fgSizer1, 1, wx.EXPAND, 5 )
 
 		self.m_sline1 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bMainSizer.Add( self.m_sline1, 0, wx.EXPAND |wx.ALL, 5 )
+		bControls.Add( self.m_sline1, 0, wx.EXPAND |wx.ALL, 5 )
 
 		bSizer1 = wx.BoxSizer( wx.VERTICAL )
 
-		self.m_chkOnlyFilledCopper = wx.CheckBox( self, wx.ID_ANY, _(u"Only place vias that connect filled copper of the selected net on multiple layers"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_chkCenterSegments = wx.CheckBox( self, wx.ID_ANY, _(u"Center each usable row segment"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_chkCenterSegments.SetToolTip( _(u"Grid and Stagger only. Preserves row spacing and Y offset; replaces X offset and stagger phase with per-segment centering.") )
+
+		bSizer1.Add( self.m_chkCenterSegments, 0, wx.ALL|wx.EXPAND|wx.LEFT, 5 )
+
+		self.m_chkOnlyFilledCopper = wx.CheckBox( self, wx.ID_ANY, _(u"Only place vias connecting selected net copper on multiple layers"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_chkOnlyFilledCopper.SetValue(True)
-		bSizer1.Add( self.m_chkOnlyFilledCopper, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_LEFT|wx.ALL|wx.EXPAND|wx.LEFT, 5 )
+		bSizer1.Add( self.m_chkOnlyFilledCopper, 0, wx.ALL|wx.EXPAND|wx.LEFT, 5 )
 
 		self.m_chkClearOwn = wx.CheckBox( self, wx.ID_ANY, _(u"Clear only plugin placed vias"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_chkClearOwn.SetValue(True)
-		bSizer1.Add( self.m_chkClearOwn, 0, wx.ALIGN_CENTER_VERTICAL|wx.ALIGN_LEFT|wx.ALL|wx.EXPAND|wx.LEFT, 5 )
+		bSizer1.Add( self.m_chkClearOwn, 0, wx.ALL|wx.EXPAND|wx.LEFT, 5 )
+
+		self.m_chkPreview = wx.CheckBox( self, wx.ID_ANY, _(u"Live placement preview"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		bSizer1.Add( self.m_chkPreview, 0, wx.ALL|wx.EXPAND|wx.LEFT, 5 )
 
 
-		bMainSizer.Add( bSizer1, 0, wx.EXPAND, 5 )
+		bControls.Add( bSizer1, 0, wx.EXPAND, 5 )
 
 		self.m_sline2 = wx.StaticLine( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.LI_HORIZONTAL )
-		bMainSizer.Add( self.m_sline2, 0, wx.EXPAND |wx.ALL, 5 )
+		bControls.Add( self.m_sline2, 0, wx.EXPAND |wx.ALL, 5 )
 
 		bSizer2 = wx.BoxSizer( wx.HORIZONTAL )
 
@@ -175,7 +224,27 @@ class viastitcher_gui ( wx.Dialog ):
 		bSizer2.Add( self.m_btnClear, 0, wx.ALIGN_CENTER|wx.ALIGN_CENTER_VERTICAL|wx.ALL, 5 )
 
 
-		bMainSizer.Add( bSizer2, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 5 )
+		bControls.Add( bSizer2, 0, wx.ALIGN_CENTER_HORIZONTAL|wx.ALIGN_CENTER_VERTICAL, 5 )
+
+
+		bMainSizer.Add( bControls, 0, wx.EXPAND, 5 )
+
+		bPreview = wx.BoxSizer( wx.VERTICAL )
+
+		self.m_lblPreviewStatus = wx.StaticText( self, wx.ID_ANY, _(u"Preview disabled"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblPreviewStatus.Wrap( -1 )
+
+		self.m_lblPreviewStatus.SetMinSize( wx.Size( 360,65 ) )
+
+		bPreview.Add( self.m_lblPreviewStatus, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_preview = wx.Panel( self, wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, wx.TAB_TRAVERSAL )
+		self.m_preview.SetMinSize( wx.Size( 360,400 ) )
+
+		bPreview.Add( self.m_preview, 1, wx.EXPAND|wx.ALL, 5 )
+
+
+		bMainSizer.Add( bPreview, 1, wx.EXPAND|wx.ALL, 8 )
 
 
 		self.SetSizer( bMainSizer )
