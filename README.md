@@ -76,7 +76,7 @@ Enable **Thin grid in empty areas** to reduce drilling away from tracks, arcs
 and pads. All nets and enabled copper layers count. Filled zones, vias and
 component outlines do not influence the proximity field.
 
-**Start thinning at distance (%)** defaults to 100; **Full thinning at distance
+**Start thinning at distance (%)** defaults to 100 and must be at least 100; **Full thinning at distance
 (%)** defaults to 300; **Maximum grid multiple** defaults to 3 (an integer).
 Distances use the normalized horizontal/vertical pitch. With a 1.5 mm square
 base grid, the pitch stays unchanged within 1.5 mm of copper, the target grows
@@ -92,6 +92,10 @@ members of a pair. Thus refill does not restore the dense grid in intentionally
 sparse areas. Existing same-net vias remain spacing obstacles even though they
 are not proximity references. This option never deletes existing vias: use
 **Clear only plugin placed vias** first if replacing an earlier dense pattern.
+
+The full-thinning distance must be greater than the start distance. All values
+must be finite; the maximum multiple must be an integer of at least 1. Invalid
+active settings are rejected before board changes.
 
 Thinning defaults to disabled and its settings are saved per zone. This is a
 geometric drilling-density heuristic, not a current-flow or signal-integrity
@@ -183,8 +187,8 @@ Some features still to code:
 - [x] Match user units (mm/inches).
 - [x] Add clear area function.
 - [ ] Draw a better UI (if anyone is willing to contribute please read the following section).
-- [x] Collision between new vias and underlying objects: 
-   - [x] tracks, 
+- [x] Collision between new vias and underlying objects:
+   - [x] tracks,
    - [x] zones,
    - [x] pads,
    - [x] footprint zones,

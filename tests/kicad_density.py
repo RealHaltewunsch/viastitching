@@ -68,6 +68,10 @@ def run_density(output):
     assert saved['SparseGrid'] and saved['DensityStartPercent']=='125' and saved['DensityMultiple']=='4'
     board,zone=board_fixture();h=harness(board,zone);h.m_chkSparse.SetValue(True);h.m_txtDensityMultiple.SetValue('1.5')
     h.onProcessAction(None);assert h.config_textbox is None and not vias(board)
+    for start in ('0','99.9'):
+        board,zone=board_fixture();h=harness(board,zone);h.m_chkSparse.SetValue(True)
+        h.m_txtDensityStart.SetValue(start);h.onProcessAction(None)
+        assert h.config_textbox is None and not vias(board)
     board,zone=board_fixture();h=harness(board,zone);h.m_chkSparse.SetValue(True);h._read_fill_settings()
     class Cancel(Progress):
         def Pulse(self,*args):return False,False

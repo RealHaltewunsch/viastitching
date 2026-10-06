@@ -31,7 +31,8 @@ class DensityTests(unittest.TestCase):
         self.assertAlmostEqual(f.distance((500,1100)),1)
 
     def test_invalid_density_settings(self):
-        for v in [(-1,3,3),(1,1,3),(2,1,3),(1,3,0),(1,3,1.5),(1,math.inf,3)]:
+        m.validate_density(1,3,3)
+        for v in [(0,3,3),(.999,3,3),(math.nan,3,3),(-1,3,3),(1,1,3),(2,1,3),(1,3,0),(1,3,1.5),(1,math.inf,3)]:
             with self.assertRaises(ValueError):m.validate_density(*v)
 
     def test_empty_board_coarse_phase_and_stability(self):

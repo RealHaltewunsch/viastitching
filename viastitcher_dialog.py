@@ -25,7 +25,7 @@ except Exception:
     from math import sqrt, pow
 import json
 
-__version__ = "0.3.9"
+__version__ = "0.3.10"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.
@@ -838,7 +838,7 @@ class ViaStitcherDialog(viastitcher_gui):
         try:
             self._read_fill_settings()
         except (ValueError, OverflowError):
-            wx.MessageBox(_("Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances 0 <= start < end with an integer multiple >= 1."))
+            wx.MessageBox(_("Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances (%) 100 <= start < end with an integer multiple >= 1."))
             return
         if self.fill_settings["adaptive"]:
             try:

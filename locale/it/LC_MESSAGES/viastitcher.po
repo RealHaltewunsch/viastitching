@@ -190,5 +190,5 @@ msgstr "Diradamento completo alla distanza (%)"
 msgid "Maximum grid multiple"
 msgstr "Multiplo massimo della griglia"
 
-msgid "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances 0 <= start < end with an integer multiple >= 1."
-msgstr "Inserire passo e dimensioni positivi, foro minore del diametro, isolamento non negativo, limiti 0 < minimo <= 100 <= massimo e distanze di densità 0 <= inizio < fine con multiplo intero >= 1."
+msgid "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances (%) 100 <= start < end with an integer multiple >= 1."
+msgstr "Inserire passo e dimensioni positivi, foro minore del diametro, isolamento non negativo, limiti 0 < minimo <= 100 <= massimo e distanze di densità (%) 100 <= inizio < fine con multiplo intero >= 1."

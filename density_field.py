@@ -4,7 +4,7 @@ from .adaptive_fill import Region, ViaIndex, segment_distance
 
 
 def validate_density(start, end, multiple):
-    if not all(math.isfinite(v) for v in (start,end,multiple)) or not 0 <= start < end:
+    if not all(math.isfinite(v) for v in (start,end,multiple)) or not 1 <= start < end:
         raise ValueError('Invalid density distances')
     if multiple < 1 or int(multiple) != multiple:
         raise ValueError('Density multiple must be a positive integer')

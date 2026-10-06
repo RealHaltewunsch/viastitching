@@ -189,5 +189,5 @@ msgstr "Full thinning at distance (%)"
 msgid "Maximum grid multiple"
 msgstr "Maximum grid multiple"
 
-msgid "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances 0 <= start < end with an integer multiple >= 1."
-msgstr "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances 0 <= start < end with an integer multiple >= 1."
+msgid "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances (%) 100 <= start < end with an integer multiple >= 1."
+msgstr "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, distance limits with 0 < minimum <= 100 <= maximum, and density distances (%) 100 <= start < end with an integer multiple >= 1."
