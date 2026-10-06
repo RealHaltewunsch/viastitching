@@ -57,6 +57,7 @@ jobs:
             __init__.py \
             defaults.json \
             localization.py \
+            placement_engine.py \
             viastitcher.png \
             viastitcher_dialog.py \
             viastitcher_gui.py \
