@@ -48,10 +48,10 @@ GUI_defaults = {
 FILL_STYLES = ("Standard", "Stagger", "Randomize", "Spiral", "Maximize")
 
 
-def _via_width(via):
+def _via_width(via, layer=pcbnew.F_Cu):
     # KiCad 10 uses per-layer padstack widths; earlier SWIG bindings do not.
     try:
-        return via.GetWidth(pcbnew.F_Cu)
+        return via.GetWidth(layer)
     except TypeError:
         return via.GetWidth()
 
@@ -234,7 +234,6 @@ class ViaStitcherDialog(viastitcher_gui):
         Every bounding box of any item found is a candidate to be inspected for overlapping.
         """
 
-        area_bbox = self.area.GetBoundingBox()
         self._board_outline = None
         self._via_layers = pcbnew.LSET()
         for layer in self.board.GetEnabledLayers().Seq():
@@ -256,11 +255,8 @@ class ViaStitcherDialog(viastitcher_gui):
 
         self.overlappings = []
 
-        for zone in self.board.Zones():
-            if zone.GetZoneName() != self.area.GetZoneName():
-                if zone.GetNetname() != self.net:
-                    if zone.GetBoundingBox().Intersects(area_bbox):
-                        self.overlappings.append(zone)
+        # Keep rule areas regardless of net/name or center-only zone overlap.
+        self.overlappings.extend(self.board.Zones())
 
         for item in tracks:
             if type(item) is pcbnew.PCB_VIA:
@@ -273,13 +269,6 @@ class ViaStitcherDialog(viastitcher_gui):
                 self.overlappings.append(pad)
             for zone in item.Zones():
                 self.overlappings.append(zone)
-
-        # TODO: change algorithm to 'If one of the candidate area's edges overlaps with target area declare candidate as overlapping'
-        for i in range(0, self.board.GetAreaCount()):
-            item = self.board.GetArea(i)
-            if item.GetBoundingBox().Intersects(area_bbox):
-                if item.GetNetname() != self.net:
-                    self.overlappings.append(item)
 
         self._object_index = BoundsIndex(pcbnew.FromMM(5))
         seen=set()
@@ -435,19 +424,22 @@ class ViaStitcherDialog(viastitcher_gui):
         if hasattr(self,"_object_index"):
             candidates=self._object_index.query((via_bbox.GetLeft()-min_hole_dist,via_bbox.GetTop()-min_hole_dist,via_bbox.GetRight()+min_hole_dist,via_bbox.GetBottom()+min_hole_dist))
         for item in candidates:
-            # Rule areas forbidding vias apply even when they permit zone fills.
-            if hasattr(item,"GetDoNotAllowVias") and item.GetDoNotAllowVias():
-                if set(item.GetLayerSet().Seq()) & set(via.GetLayerSet().Seq()):
-                    outline=item.Outline();position=via.GetPosition()
-                    if outline.Contains(position):return True
-                    for i in range(outline.OutlineCount()):
-                        rings=[outline.COutline(i)]+[outline.CHole(i,j) for j in range(outline.HoleCount(i))]
-                        for ring in rings:
-                            if any(pnt2line(position,ring.CPoint(j),ring.CPoint((j+1)%ring.PointCount()))[0] < _via_width(via)/2
-                                   for j in range(ring.PointCount())):
-                                return True
-            # 1. ignore copper filled zones
+            # Rule areas use their outline, actual via layer span and copper
+            # radius. Ordinary copper zones are not keepouts, even if stale
+            # restriction flags remain set after converting a rule area.
             if type(item).__name__ in ["ZONE", "FP_ZONE", "PCB_ZONE", "ZONE_CONTAINER"]:
+                is_rule_area = (item.GetIsRuleArea() if hasattr(item, "GetIsRuleArea")
+                                else item.GetIsKeepout())
+                if is_rule_area and item.GetDoNotAllowVias():
+                    common_layers = (set(via.GetLayerSet().Seq())
+                                     & set(item.GetLayerSet().Seq()))
+                    common_layers = [layer for layer in common_layers
+                                     if pcbnew.IsCopperLayer(layer)]
+                    if common_layers:
+                        radius = int(math.ceil(max(_via_width(via, layer)
+                                                   for layer in common_layers) / 2))
+                        if item.Outline().Collide(via.GetPosition(), radius):
+                            return True
                 continue
 
             # 2. handling of the same net points

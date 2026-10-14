@@ -56,3 +56,22 @@ like spacing comparison. Re-run `tests/kicad_performance.py` for local timings.
 The manual documents finite segment-probing resolution and custom-DRC-rule
 limitations. These checks do not establish arbitrary-board safety. Run DRC on
 actual boards and complete the release gates in `roadmap-040.md` before releasing.
+
+## Keepout fix integration — 14 October 2026
+
+Ported `RealHaltewunsch/viastitching` commit `0686fc3` from
+`fix/respect-via-keepouts` onto the roadmap engine. Board and footprint rule
+areas are collected independently of net/name, and native polygon collision
+checks use the via's actual copper-layer span and radius. Ordinary zones with
+stale restriction flags are ignored.
+
+- Eight pure test methods and the existing native roadmap suite pass.
+- `tests/kicad_keepouts.py` passes same-name/same-net, inner-layer, blind-via,
+  allowed-via, ordinary-zone, circular-corner, polygon-hole and footprint cases.
+- Preview/placement equivalence and keepout exclusion pass for all five modes
+  plus centered Standard.
+- `tests/check_drc.py` on those six before/after pairs reports no new violations
+  and zero unconnected items in KiCad 10 on macOS.
+
+The previously built PCM archive predates this fix; these results describe the
+updated source branch. The compatibility and installation gates above remain open.
