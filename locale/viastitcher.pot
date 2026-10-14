@@ -1,175 +1,110 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
-#
-#, fuzzy
 msgid ""
-msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-09-02 16:22+0200\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
-"Language-Team: LANGUAGE <LL@li.org>\n"
-"Language: \n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
 
-#: .\viastitcher_dialog.py:56
-#, python-brace-format
-msgid "{0} v{1}"
-msgstr ""
-
-#: .\viastitcher_dialog.py:94
-msgid "Not a valid frame"
-msgstr ""
-
-#: .\viastitcher_dialog.py:100
-msgid "Unsupported unit selected"
-msgstr ""
-
-#: .\viastitcher_dialog.py:106
-msgid "Please select a valid area"
-msgstr ""
-
-#: .\viastitcher_dialog.py:164
-msgid "Please set a valid via diameter and drill size in Board Setup"
-msgstr ""
-
-#: .\viastitcher_dialog.py:301
-#, python-format
-msgid "Removed: %d vias!"
-msgstr ""
-
-#: .\viastitcher_dialog.py:632
-#, python-format
-msgid "Implanted: %d vias!"
-msgstr ""
-
-#: .\viastitcher_dialog.py:636
-msgid "No vias implanted!"
-msgstr ""
-
-#: .\viastitcher_plugin.py:18
-msgid "ViaStitcher"
-msgstr ""
-
-#: .\viastitcher_plugin.py:19
-msgid "Modify PCB"
-msgstr ""
-
-#: .\viastitcher_plugin.py:20
-msgid "Create a vias stitching pattern"
-msgstr ""
-
-#: .\viastitcher_gui.py:23
-msgid "Via Stitcher"
-msgstr ""
-
-#: .\viastitcher_gui.py:34
-msgid "Style"
-msgstr ""
-
-#: .\viastitcher_gui.py:39
-msgid "Standard"
-msgstr ""
-
-msgid "Stagger"
-msgstr ""
-
-#: .\viastitcher_gui.py:51
-msgid "Randomize"
-msgstr ""
-
-#: .\viastitcher_gui.py:60
-msgid "Net name"
-msgstr ""
-
-#: .\viastitcher_gui.py:75
-msgid "Size / drill"
-msgstr ""
-
-#: .\viastitcher_gui.py:90 .\viastitcher_gui.py:110 .\viastitcher_gui.py:130
-#: .\viastitcher_gui.py:148
-msgid "mm"
-msgstr ""
-
-#: .\viastitcher_gui.py:95
-msgid "Spacing (V/H)"
-msgstr ""
-
-#: .\viastitcher_gui.py:115
-msgid "Offset (V/H)"
-msgstr ""
-
-#: .\viastitcher_gui.py:135
-msgid "Clearance"
-msgstr ""
-
-#: .\viastitcher_gui.py:140
-msgid "0"
-msgstr ""
-
-#: .\viastitcher_gui.py:161
-msgid "Only place vias that connect filled copper of the selected net on multiple layers"
-msgstr ""
-
-#: .\viastitcher_gui.py:165
-msgid "Clear only plugin placed vias"
-msgstr ""
-
-#: .\viastitcher_gui.py:177
-msgid "&Ok"
-msgstr ""
-
-#: .\viastitcher_gui.py:182
 msgid "&Cancel"
 msgstr ""
 
-#: .\viastitcher_gui.py:185
+msgid "&Ok"
+msgstr ""
+
+msgid "0"
+msgstr ""
+
+msgid "150"
+msgstr ""
+
+msgid "80"
+msgstr ""
+
 msgid "C&lear"
 msgstr ""
 
-msgid "Refill islands and gaps"
+msgid "Cannot determine free via regions: {error}"
 msgstr ""
 
-msgid "After the grid pass, try nearby positions in unserved copper islands and gaps."
+msgid "Clear only plugin placed vias"
 msgstr ""
 
-msgid "Refill spacing (min/max %)"
+msgid "Create a vias stitching pattern"
 msgstr ""
 
-msgid "Percent of the horizontal and vertical grid spacing. Limits must include 100%."
-msgstr ""
-
-msgid "Searching for additional via positions..."
-msgstr ""
-
-msgid "Additional vias: %d"
-msgstr ""
-
-msgid "Grid vias: {grid}\nAdditional vias: {extra}\nUnserved copper islands (per layer): {unserved}"
-msgstr ""
-
-msgid "Refill stopped. Vias already placed have been kept."
+msgid "Edge clearance"
 msgstr ""
 
 msgid "Enter positive spacing and via sizes, drill smaller than diameter, non-negative clearance, and distance limits with 0 < minimum <= 100 <= maximum."
 msgstr ""
 
-msgid "This KiCad version cannot read filled copper polygons. Disable refill to use the regular grid."
+msgid "Finding free copper regions..."
 msgstr ""
 
-msgid "Fill the selected copper zone before using refill."
+msgid "Geometric via placement"
 msgstr ""
 
-msgid "Additional vias: {vias}\nPositions checked: {checked}"
+msgid "Maximum target neighbor spacing as a percentage of nominal X/Y spacing. Obstacles can make this target impossible."
 msgstr ""
 
-msgid "Search limit reached. Partial results kept; some areas may remain unfilled."
+msgid "Minimum object clearance"
+msgstr ""
+
+msgid "Minimum via-center spacing as a percentage of nominal X/Y spacing. Existing same-net vias count too."
+msgstr ""
+
+msgid "Modify PCB"
+msgstr ""
+
+msgid "Net name"
+msgstr ""
+
+msgid "Nominal spacing (V/H)"
+msgstr ""
+
+msgid "Not a valid frame"
+msgstr ""
+
+msgid "Optional minimum clearance. Zero uses board/netclass requirements; stricter rules remain enforced."
+msgstr ""
+
+msgid "Placed vias: {count}\nProcessed free regions: {regions}\nPlacement completed."
+msgstr ""
+
+msgid "Placement stopped. {count} vias already placed have been kept."
+msgstr ""
+
+msgid "Placing vias: {count} · Regions: {regions}"
+msgstr ""
+
+msgid "Please select a valid area"
+msgstr ""
+
+msgid "Please set a valid via diameter and drill size in Board Setup"
+msgstr ""
+
+msgid "Removed: %d vias!"
 msgstr ""
 
 msgid "Require copper connection on all layers (off: at least two)"
+msgstr ""
+
+msgid "Size / drill"
+msgstr ""
+
+msgid "Spacing tolerance (min/max %)"
+msgstr ""
+
+msgid "Unsupported unit selected"
+msgstr ""
+
+msgid "Via Stitcher"
+msgstr ""
+
+msgid "ViaStitcher"
+msgstr ""
+
+msgid "mm"
+msgstr ""
+
+msgid "{0} v{1} – geometric test build"
+msgstr ""
+
+msgid "Invalid placement settings: {error}"
 msgstr ""

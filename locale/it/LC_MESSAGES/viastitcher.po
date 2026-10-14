@@ -174,3 +174,54 @@ msgstr "Limite di ricerca raggiunto. Risultati parziali mantenuti; alcune aree p
 
 msgid "Require copper connection on all layers (off: at least two)"
 msgstr "Richiedi rame su tutti gli strati (disattivato: almeno due)"
+
+msgid "150"
+msgstr "150"
+
+msgid "80"
+msgstr "80"
+
+msgid "Cannot determine free via regions: {error}"
+msgstr "Impossibile determinare le regioni libere per le via: {error}"
+
+msgid "Edge clearance"
+msgstr "Distanza dal bordo"
+
+msgid "Finding free copper regions..."
+msgstr "Ricerca delle regioni di rame libere..."
+
+msgid "Geometric via placement"
+msgstr "Posizionamento geometrico delle via"
+
+msgid "Maximum target neighbor spacing as a percentage of nominal X/Y spacing. Obstacles can make this target impossible."
+msgstr "Distanza massima desiderata dalle via vicine in percentuale del passo nominale X/Y. Gli ostacoli possono impedire questo obiettivo."
+
+msgid "Minimum object clearance"
+msgstr "Distanza minima dagli oggetti"
+
+msgid "Minimum via-center spacing as a percentage of nominal X/Y spacing. Existing same-net vias count too."
+msgstr "Distanza minima tra i centri delle via in percentuale del passo nominale X/Y. Sono incluse le via esistenti della stessa rete."
+
+msgid "Nominal spacing (V/H)"
+msgstr "Passo nominale (V/O)"
+
+msgid "Optional minimum clearance. Zero uses board/netclass requirements; stricter rules remain enforced."
+msgstr "Distanza minima opzionale. Zero usa le regole della scheda o della classe di rete; le regole più restrittive restano applicate."
+
+msgid "Placed vias: {count}\nProcessed free regions: {regions}\nPlacement completed."
+msgstr "Via posizionate: {count}\nRegioni libere elaborate: {regions}\nPosizionamento completato."
+
+msgid "Placement stopped. {count} vias already placed have been kept."
+msgstr "Posizionamento interrotto. Le {count} via già posizionate sono state mantenute."
+
+msgid "Placing vias: {count} · Regions: {regions}"
+msgstr "Via posizionate: {count} · Regioni: {regions}"
+
+msgid "Spacing tolerance (min/max %)"
+msgstr "Tolleranza del passo (min/max %)"
+
+msgid "{0} v{1} – geometric test build"
+msgstr "{0} v{1} – versione di prova geometrica"
+
+msgid "Invalid placement settings: {error}"
+msgstr "Impostazioni di posizionamento non valide: {error}"

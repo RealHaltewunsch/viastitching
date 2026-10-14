@@ -1,1 +1,10 @@
-{"HSpacing": "2", "VSpacing": "2", "HOffset": "0", "VOffset": "0", "Clearance": "0", "Randomize": false, "AdaptiveFill": false, "MinSpacingPercent": "80", "MaxSpacingPercent": "150", "RequireAllCopperLayers": false}
+{
+  "HSpacing": "1.5",
+  "VSpacing": "1.5",
+  "Clearance": "0",
+  "ObjectClearance": "0",
+  "MinSpacingPercent": "80",
+  "MaxSpacingPercent": "150",
+  "RequireAllCopperLayers": false,
+  "PlacementEngine": "Geometric"
+}

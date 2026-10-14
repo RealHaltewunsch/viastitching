@@ -173,3 +173,54 @@ msgstr "Search limit reached. Partial results kept; some areas may remain unfill
 
 msgid "Require copper connection on all layers (off: at least two)"
 msgstr "Require copper connection on all layers (off: at least two)"
+
+msgid "150"
+msgstr "150"
+
+msgid "80"
+msgstr "80"
+
+msgid "Cannot determine free via regions: {error}"
+msgstr "Cannot determine free via regions: {error}"
+
+msgid "Edge clearance"
+msgstr "Edge clearance"
+
+msgid "Finding free copper regions..."
+msgstr "Finding free copper regions..."
+
+msgid "Geometric via placement"
+msgstr "Geometric via placement"
+
+msgid "Maximum target neighbor spacing as a percentage of nominal X/Y spacing. Obstacles can make this target impossible."
+msgstr "Maximum target neighbor spacing as a percentage of nominal X/Y spacing. Obstacles can make this target impossible."
+
+msgid "Minimum object clearance"
+msgstr "Minimum object clearance"
+
+msgid "Minimum via-center spacing as a percentage of nominal X/Y spacing. Existing same-net vias count too."
+msgstr "Minimum via-center spacing as a percentage of nominal X/Y spacing. Existing same-net vias count too."
+
+msgid "Nominal spacing (V/H)"
+msgstr "Nominal spacing (V/H)"
+
+msgid "Optional minimum clearance. Zero uses board/netclass requirements; stricter rules remain enforced."
+msgstr "Optional minimum clearance. Zero uses board/netclass requirements; stricter rules remain enforced."
+
+msgid "Placed vias: {count}\nProcessed free regions: {regions}\nPlacement completed."
+msgstr "Placed vias: {count}\nProcessed free regions: {regions}\nPlacement completed."
+
+msgid "Placement stopped. {count} vias already placed have been kept."
+msgstr "Placement stopped. {count} vias already placed have been kept."
+
+msgid "Placing vias: {count} · Regions: {regions}"
+msgstr "Placing vias: {count} · Regions: {regions}"
+
+msgid "Spacing tolerance (min/max %)"
+msgstr "Spacing tolerance (min/max %)"
+
+msgid "{0} v{1} – geometric test build"
+msgstr "{0} v{1} – geometric test build"
+
+msgid "Invalid placement settings: {error}"
+msgstr "Invalid placement settings: {error}"
