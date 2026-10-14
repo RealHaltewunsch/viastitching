@@ -7,7 +7,8 @@ The current build is tested with KiCad 10 on macOS.
 
 Feature branch: [`feature/geometric-adaptive-density`](https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density).
 See [adaptive density settings and validation](docs/adaptive-density.md) for the
-new engine, controls, recorded PCB comparisons and limits.
+new engine, controls, recorded PCB comparisons and limits. The current build
+also enforces [global same-net minimum spacing](docs/global-spacing.md).
 
 ![Geometric test-build dialog](pictures/geometric-adaptive-dialog.png)
 
@@ -24,8 +25,8 @@ All new positions use exactly 0.01 mm coordinates. Clearance geometry uses finer
 native KiCad integer coordinates. Board edges, actual track/arc/pad/drill shapes,
 via keepouts and the selected net's filled copper are checked geometrically.
 
-- **Minimum spacing (%)** is a hard density minimum within an independent free
-  region, including existing same-net vias. Unequal X/Y values define an
+- **Minimum spacing (%)** is a hard density minimum shared across all free
+  regions, including every existing same-net via. Unequal X/Y values define an
   elliptical distance metric.
 - **Maximum target spacing (%)** limits growth from a neighboring via. Obstacles
   can require a new independent seed; it does not guarantee that every nearest
@@ -67,8 +68,10 @@ edge positions. Narrow regions with no sufficiently deep interior stay dense.
 The minimum/maximum tolerance percentages apply to this **local** spacing. The
 larger local factor of a candidate and an existing same-net via sets their pair
 spacing, preventing dense gaps from being added beside sparse-area vias. Density
-spacing remains local to an independent free region, preserving the new engine's
-separation of placement groups; physical drilled-hole constraints remain global.
+exclusion is shared across all free regions, including areas separated by a
+track. Only the local growth direction, neighbor target and phase remain
+independent. Remote vias outside the minimum-distance ellipse have no influence.
+Physical drilled-hole constraints also remain global.
 Existing vias are not moved or removed. The geometric gap search uses the same
 field, so it cannot refill sparse areas to the old dense pitch. This new engine
 has no fixed global raster and no separate refill pass; adaptive density scales

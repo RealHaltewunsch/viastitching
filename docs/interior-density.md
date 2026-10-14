@@ -1,5 +1,8 @@
 # Adaptive density restricted to area interiors — 0.5.2
 
+The following validates the 0.5.2 edge-protection change. Current 0.5.3 adds
+[global minimum spacing across regions](global-spacing.md).
+
 The geometric engine now preserves nominal local spacing near **tracks, pads,
 and all permitted-area boundaries**. Boundary protection is always part of the
 optional Adaptive fill density setting; no extra checkbox is needed.

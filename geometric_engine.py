@@ -120,7 +120,7 @@ class PlacementStats:
 class Cancelled(Exception): pass
 
 class Engine:
-    def __init__(self,backend,pitch,minimum=.8,maximum=1.5,pulse=None,physical_radius=0,density=None):
+    def __init__(self,backend,pitch,minimum=.8,maximum=1.5,pulse=None,physical_radius=0,density=None,anchors=()):
         if any(not isinstance(v,int) or v<=0 for v in pitch):raise ValueError('Positive integer pitch required')
         if not isfinite(float(minimum)) or not isfinite(float(maximum)) or not 0<float(minimum)<=1<=float(maximum):raise ValueError('Invalid distance limits')
         self.density=density if density is not None and density.multiple>1 else None
@@ -128,6 +128,14 @@ class Engine:
         self.pulse=pulse or (lambda stats:True);self.stats=PlacementStats()
         self.physical=Spacing((max(1,physical_radius),)*2,1);self.physical_radius=physical_radius
         self.envelopes={};self.active_envelopes=[]
+        # Shared exclusion metric, separate from each region's growth history.
+        # Register all existing same-net vias before ANY region is processed.
+        self.separation=self.spacing(minimum);self.anchor_points=set()
+        for p in sorted({tuple(p) for p in anchors}):self.add_anchor(p)
+    def add_anchor(self, p):
+        p=tuple(map(int,p))
+        if p not in self.anchor_points:
+            self.anchor_points.add(p);self.separation.add(p)
     def spacing(self, minimum):
         return self.density.spacing(minimum) if self.density else Spacing(self.pitch,minimum)
     def radii(self, index, p):
@@ -139,7 +147,7 @@ class Engine:
             yield from poly.centers()
     def tick(self):
         if not self.pulse(self.stats):self.stats.cancelled=True;raise Cancelled()
-    def find(self,shape,index,preferred=None,maximum_from=None):
+    def find(self,shape,preferred=None,maximum_from=None):
         stack=[shape]
         limit=self.spacing(self.maximum) if maximum_from is not None else None
         while stack:
@@ -154,14 +162,14 @@ class Engine:
                 if limit is not None and not self.density:
                     closest=(max(lo,min(hi,maximum_from[0])),max(bt,min(tp,maximum_from[1])))
                     if not limit.within(closest,maximum_from):continue
-                if index.covers_box(bounds) or (self.physical_radius and self.physical.covers_box(self.backend.world_bounds(bounds))) or any(e.covers_box(self.backend.world_bounds(bounds)) for e in self.active_envelopes):continue
+                if self.separation.covers_box(bounds) or (self.physical_radius and self.physical.covers_box(self.backend.world_bounds(bounds))) or any(e.covers_box(self.backend.world_bounds(bounds)) for e in self.active_envelopes):continue
                 seen=set()
                 candidates=chain((preferred,) if preferred is not None else (),self.centers(poly))
                 if lo==hi and bt==tp:candidates=chain(((lo,bt),),candidates)
                 for p in candidates:
                     if p in seen:continue
                     seen.add(p);self.stats.geometry_probes+=1
-                    if poly.contains(p) and index.allows(p) and (limit is None or limit.within(p,maximum_from)) and (not self.physical_radius or self.physical.allows(self.backend.world(p))) and all(e.allows(self.backend.world(p)) for e in self.active_envelopes):return p
+                    if poly.contains(p) and self.separation.allows(p) and (limit is None or limit.within(p,maximum_from)) and (not self.physical_radius or self.physical.allows(self.backend.world(p))) and all(e.allows(self.backend.world(p)) for e in self.active_envelopes):return p
                 if lo==hi and bt==tp:continue
                 self.stats.refined_boxes+=1
                 # Split candidate ranges at half-step boundaries. Geometric
@@ -179,9 +187,13 @@ class Engine:
     def run_region(self,shape,anchors=()):
         self.active_envelopes=[self.envelopes.setdefault(key,Spacing((radius,radius),1)) for key,radius in getattr(self.backend,"active_envelopes",())]
         self.stats.regions+=1;index=self.spacing(self.minimum)
-        for p in sorted(anchors):index.add(p)
+        for p in sorted(anchors):
+            index.add(p);self.add_anchor(p)
         remaining=self.backend.copy(shape)
-        for p in index.points:remaining=self.backend.subtract_disk(remaining,p,*self.radii(index,p))
+        # Only nearby exclusions touch this region. Remote regions impose no
+        # grid phase, growth direction or maximum-neighbor requirement.
+        for p in self.separation.nearby(self.backend.bounds(shape)):
+            remaining=self.backend.subtract_disk(remaining,p,*self.radii(self.separation,p))
         ox,oy=self.backend.world((0,0))
         for e in self.active_envelopes:
             for world in e.nearby(self.backend.world_bounds(self.backend.bounds(shape))):remaining=self.backend.subtract_disk(remaining,(world[0]-ox,world[1]-oy),e.rx,e.ry)
@@ -206,9 +218,9 @@ class Engine:
                     scale=float(max(self.density.factor(parent),self.density.upper_factor((ideal[0]-rx,ideal[1]-ry,ideal[0]+rx,ideal[1]+ry))))
                 local=self.backend.within_disk(local,parent,int(self.pitch[0]*float(self.maximum)*scale),int(self.pitch[1]*float(self.maximum)*scale))
                 if self.backend.empty(local):continue
-                p=self.find(local,index,preferred=ideal,maximum_from=parent)
+                p=self.find(local,preferred=ideal,maximum_from=parent)
                 if p is not None:break
-            if p is None:p=self.find(search_area,index)
+            if p is None:p=self.find(search_area)
             if p is None and edge_stage:
                 # The protected band is filled first under the same acceptance
                 # rules. Revisit its growth targets against the interior now.
@@ -220,7 +232,7 @@ class Engine:
                         queue.append(((nearest(parent[0]+dx),nearest(parent[1]+dy)),parent))
                 continue
             if p is None:break  # Geometric proof: no remaining lattice center.
-            index.add(p)
+            index.add(p);self.separation.add(p)
             world=self.backend.world(p)
             if self.physical_radius:self.physical.add(world)
             for e in self.active_envelopes:e.add(world)

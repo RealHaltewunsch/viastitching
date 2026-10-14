@@ -18,7 +18,7 @@ from .density_field import board_density, validate_density
 
 import json
 
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.
@@ -331,7 +331,7 @@ class ViaStitcherDialog(viastitcher_gui):
         try:
             if not hasattr(self,"_geometry"):self._prepare_geometry()
             s=self.fill_settings;g=self._geometry
-            solver=Engine(g.backend,s["pitch"],s["minimum"],s["maximum"],pulse=lambda stats:self._pulse(_("Placing vias: {count} · Regions: {regions}").format(count=stats.placed,regions=stats.regions)),physical_radius=g.pair_radius,density=self._density)
+            solver=Engine(g.backend,s["pitch"],s["minimum"],s["maximum"],pulse=lambda stats:self._pulse(_("Placing vias: {count} · Regions: {regions}").format(count=stats.placed,regions=stats.regions)),physical_radius=g.pair_radius,anchors=g.anchors,density=self._density)
             for shape,anchors in g.regions():
                 for position in solver.run_region(shape,anchors):self._place_geometric_via(position)
             wx.MessageBox(_("Placed vias: {count}\nProcessed free regions: {regions}\nPlacement completed.").format(count=solver.stats.placed,regions=solver.stats.regions))

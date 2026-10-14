@@ -1,7 +1,7 @@
 # New geometric placement engine with adaptive fill density
 
 Feature branch: [`feature/geometric-adaptive-density`](https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density).
-Experimental PCM version: **0.5.2**, based on upstream master `d7eb10f` and the
+Experimental PCM version: **0.5.3**, based on upstream master `d7eb10f` and the
 new geometric-engine commit `05710ed`. The branch includes the complete placement
 rewrite: permitted via-center polygons, direct gap centers, local growth,
 0.01-mm positions, geometric remaining-area checks, and no separate refill pass.
@@ -42,9 +42,11 @@ via positions remain quantized to 0.01 mm.
 
 Both spacing tolerances apply to the local target. For a candidate and a via,
 the larger endpoint factor sets their symmetric pair spacing. Existing same-net
-vias are included in their free region's spacing index. Independent free regions
-keep their separate density distributions; physical drilled-hole and scoped
-foreign-plane constraints still apply across the relevant regions.
+vias are registered in a shared spacing index before any region is processed.
+The minimum applies across region boundaries too. Each region keeps its own
+local growth/phase and maximum-neighbor target. Remote vias outside the exclusion
+ellipse do not influence it; physical drilled-hole and scoped foreign-plane
+constraints also apply across the relevant regions. See [global minimum spacing](global-spacing.md).
 
 The new engine scales its preferred local spacing. It does not require a global
 raster phase, and its remaining-area search cannot restore the original dense

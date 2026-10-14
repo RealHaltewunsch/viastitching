@@ -54,16 +54,25 @@ for region in data['regions']:
   envelope_points.setdefault(key,[]).extend([[x+origin[0],y+origin[1]] for x,y in region['positions']])
 envelope_trees={key:cKDTree(points) for key,points in envelope_points.items() if points}
 def envelope_excluded(p,q,radius):return (int(p[0])-int(q[0]))**2+(int(p[1])-int(q[1]))**2<radius**2
+assert len({tuple(p) for p in allp})==len(allp),'Duplicate generated via positions'
+global_points=[[x-origin[0],y-origin[1]] for x,y in allp]+data.get('global_anchors',[])
+global_coordinates=np.array(global_points,dtype=np.float64).reshape((-1,2))
+global_normalized=global_coordinates/np.array((sx,sy))
+global_tree=cKDTree(global_normalized) if len(global_points) else None
+global_mask=unary_union([Point(q).buffer(n/d*float(factor(global_points[i]))-2/min(sx,sy),quad_segs=24) for i,q in enumerate(global_normalized)]) if data.get('global_spacing') else None
 start=time.monotonic();nodes=probes=0
 for region in data['regions']:
- points=region['positions']+region['anchors']
+ points=global_points if data.get('global_spacing') else region['positions']+region['anchors']
  active=[(envelope_trees[key],envelope_points[key],radius) for key,radius in region.get('envelopes',[]) if key in envelope_trees]
- coordinates=np.array(points,dtype=np.float64).reshape((-1,2));normalized=coordinates/np.array((sx,sy))
- tree=cKDTree(normalized) if len(points) else None
+ if data.get('global_spacing'):
+  normalized=global_normalized;tree=global_tree
+ else:
+  coordinates=np.array(points,dtype=np.float64).reshape((-1,2));normalized=coordinates/np.array((sx,sy))
+  tree=cKDTree(normalized) if len(points) else None
  # Independently check ALL generated pairs and ALL existing same-net anchors.
  for i,p in enumerate(region['positions']):
   for j in closest(tree,(p[0]/sx,p[1]/sy),n/d*multiple):
-   if j==i:continue
+   if points[j]==p:continue
    assert not excluded(p,points[j]),('Density distance violated',p,points[j])
   world=[p[0]+origin[0],p[1]+origin[1]]
   for extra_tree,extra_points,extra_radius in active:
@@ -76,8 +85,8 @@ for region in data['regions']:
  shape=unary_union([Polygon(p['outer'],p['holes']) for p in region['polygons']])
  norm=scale(shape,xfact=1/sx,yfact=1/sy,origin=(0,0))
  for p in region['positions']:assert shape.covers(Point(p)),('Outside allowed geometry',p)
- disks=[Point(q).buffer(n/d*float(factor(points[i]))-2/min(sx,sy),quad_segs=24) for i,q in enumerate(normalized)]
- remaining=norm.difference(unary_union(disks))
+ mask=global_mask if data.get('global_spacing') else unary_union([Point(q).buffer(n/d*float(factor(points[i]))-2/min(sx,sy),quad_segs=24) for i,q in enumerate(normalized)])
+ remaining=norm.difference(mask)
  stack=[remaining]
  while stack:
   piece=stack.pop();nodes+=1
@@ -108,5 +117,5 @@ for region in data['regions']:
    mid=((bt+tp)//2+.5)*step/sy
    regions=[box(a,b,c,mid),box(a,mid,c,e)]
   stack.extend(piece.intersection(r) for r in regions)
-result={'board':name,'adaptive_density':bool(density),'remaining_insertable_centers':0,'spacing_pass':True,'global_physical_spacing_pass':True,'foreign_plane_envelopes_pass':True,'nodes':nodes,'point_probes':probes,'seconds':time.monotonic()-start}
+result={'board':name,'adaptive_density':bool(density),'remaining_insertable_centers':0,'spacing_pass':True,'global_same_net_spacing':bool(data.get('global_spacing')),'global_physical_spacing_pass':True,'foreign_plane_envelopes_pass':True,'nodes':nodes,'point_probes':probes,'seconds':time.monotonic()-start}
 (out/'audit-result.json').write_text(json.dumps(result,indent=2));print(result,flush=True)
