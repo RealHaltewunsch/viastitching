@@ -224,3 +224,36 @@ msgstr "{0} v{1} – geometric test build"
 
 msgid "Invalid placement settings: {error}"
 msgstr "Invalid placement settings: {error}"
+
+msgid "Adaptive fill density"
+msgstr "Adaptive fill density"
+
+msgid "Start thinning at distance (%)"
+msgstr "Start thinning at distance (%)"
+
+msgid "Full thinning at distance (%)"
+msgstr "Full thinning at distance (%)"
+
+msgid "Maximum spacing factor"
+msgstr "Maximum spacing factor"
+
+msgid "Building adaptive density field..."
+msgstr "Building adaptive density field..."
+
+msgid "Increase spacing in areas far from tracks and pads. Zones and vias do not affect density."
+msgstr "Increase spacing in areas far from tracks and pads. Zones and vias do not affect density."
+
+msgid "At least 100%. Up to this distance from track/pad copper, the nominal spacing applies."
+msgstr "At least 100%. Up to this distance from track/pad copper, the nominal spacing applies."
+
+msgid "Must exceed the start distance. Between start and full distance, the spacing factor increases linearly."
+msgstr "Must exceed the start distance. Between start and full distance, the spacing factor increases linearly."
+
+msgid "Positive integer. Factor 3 changes 1.5 mm spacing to 4.5 mm in empty areas."
+msgstr "Positive integer. Factor 3 changes 1.5 mm spacing to 4.5 mm in empty areas."
+
+msgid "Minimum via-center spacing as a percentage of local X/Y spacing, including adaptive density. Existing same-net vias count too."
+msgstr "Minimum via-center spacing as a percentage of local X/Y spacing, including adaptive density. Existing same-net vias count too."
+
+msgid "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
+msgstr "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."

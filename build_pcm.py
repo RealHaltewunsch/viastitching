@@ -8,7 +8,7 @@ git=os.environ.get('GIT_BIN','git')
 sha=subprocess.check_output([git,'rev-parse','HEAD'],cwd=root,text=True).strip()
 def source(name):return subprocess.check_output([git,'show',sha+':'+name],cwd=root)
 files={'metadata.json':'metadata.json','resources/icon.png':'viastitcher64x64.png'}
-for name in ('__init__.py','defaults.json','localization.py','geometric_engine.py','native_geometry.py','project_rules.py','viastitcher.png','viastitcher_dialog.py','viastitcher_gui.py','viastitcher_plugin.py'):
+for name in ('__init__.py','defaults.json','localization.py','geometric_engine.py','density_field.py','native_geometry.py','project_rules.py','viastitcher.png','viastitcher_dialog.py','viastitcher_gui.py','viastitcher_plugin.py'):
  files['plugins/'+name]=name
 for name in subprocess.check_output([git,'ls-files','locale'],cwd=root,text=True).splitlines():files['plugins/'+name]=name
 metadata=json.loads(source('metadata.json'));version=metadata['versions'][0]['version']

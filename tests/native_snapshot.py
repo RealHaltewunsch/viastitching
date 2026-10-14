@@ -11,5 +11,11 @@ for (shape,anchors),stats in zip(g.regions(),r['regions']):
  assert len(anchors)==(stats['anchors'] if isinstance(stats['anchors'],int) else len(stats['anchors']))
  records.append({'envelopes':g.backend.active_envelopes,'polygons':[asdict(p) for p in g.backend.polygons(shape)],'anchors':anchors,'positions':[[x-g.origin[0],y-g.origin[1]] for x,y in ps]})
 assert offset==len(r['positions'])
-(out/'audit-data.json').write_text(json.dumps({'origin':g.origin,'pitch':[1500000,1500000],'minimum':[4,5],'physical_radius':g.pair_radius,'regions':records,'all_positions':r['positions']}))
+data={'origin':g.origin,'pitch':[1500000,1500000],'minimum':[4,5],'physical_radius':g.pair_radius,'regions':records,'all_positions':r['positions']}
+if r.get('adaptive_density'):
+ density_module=importlib.import_module(pkg.__name__+'.density_field')
+ field=density_module.board_density(b,(1500000,1500000),origin=g.origin)
+ # Normalized contours are exported to the independent Shapely verifier.
+ data['density']={'start':field.start,'end':field.end,'multiple':field.multiple,'polygons':[asdict(p) for p in field.polygons]}
+(out/'audit-data.json').write_text(json.dumps(data))
 print(name,'center-domain snapshot ready',flush=True)

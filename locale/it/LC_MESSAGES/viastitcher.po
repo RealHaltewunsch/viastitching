@@ -225,3 +225,36 @@ msgstr "{0} v{1} – versione di prova geometrica"
 
 msgid "Invalid placement settings: {error}"
 msgstr "Impostazioni di posizionamento non valide: {error}"
+
+msgid "Adaptive fill density"
+msgstr "Densità di riempimento adattiva"
+
+msgid "Start thinning at distance (%)"
+msgstr "Inizio diradamento a distanza (%)"
+
+msgid "Full thinning at distance (%)"
+msgstr "Diradamento completo a distanza (%)"
+
+msgid "Maximum spacing factor"
+msgstr "Fattore massimo del passo"
+
+msgid "Building adaptive density field..."
+msgstr "Calcolo della densità adattiva..."
+
+msgid "Increase spacing in areas far from tracks and pads. Zones and vias do not affect density."
+msgstr "Aumenta il passo nelle aree lontane da piste e pad. Zone e via non influenzano la densità."
+
+msgid "At least 100%. Up to this distance from track/pad copper, the nominal spacing applies."
+msgstr "Almeno 100%. Fino a questa distanza dal rame di piste e pad si applica il passo nominale."
+
+msgid "Must exceed the start distance. Between start and full distance, the spacing factor increases linearly."
+msgstr "Deve superare la distanza iniziale. Tra inizio e fine il fattore del passo aumenta linearmente."
+
+msgid "Positive integer. Factor 3 changes 1.5 mm spacing to 4.5 mm in empty areas."
+msgstr "Intero positivo. Il fattore 3 porta il passo da 1,5 mm a 4,5 mm nelle aree vuote."
+
+msgid "Minimum via-center spacing as a percentage of local X/Y spacing, including adaptive density. Existing same-net vias count too."
+msgstr "Distanza minima tra i centri in percentuale del passo X/Y locale, inclusa la densità adattiva. Contano anche le via esistenti della stessa rete."
+
+msgid "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
+msgstr "Distanza massima obiettivo in percentuale del passo X/Y locale, inclusa la densità adattiva. Gli ostacoli possono renderla irrealizzabile."

@@ -1,11 +1,15 @@
-# ViaStitcher — geometric placement test build
+# ViaStitcher — new geometric placement engine + adaptive density
 
 This experimental branch replaces the upstream grid/refill engine with a new
 geometry-led engine. It is based on upstream master `d7eb10f`; the engine uses
 KiCad's native integer polygon operations and Python's standard library.
 The current build is tested with KiCad 10 on macOS.
 
-![Geometric test-build dialog](pictures/geometric-dialog.png)
+Feature branch: [`feature/geometric-adaptive-density`](https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density).
+See [adaptive density settings and validation](docs/adaptive-density.md) for the
+new engine, controls, recorded PCB comparisons and limits.
+
+![Geometric test-build dialog](pictures/geometric-adaptive-dialog.png)
 
 ## Placement
 
@@ -37,6 +41,40 @@ There is no separate **Refill islands and gaps** option: gap placement and final
 remaining-area verification belong to the same engine. Old offset, style and
 refill configuration keys are ignored; spacing, tolerances, zone/group ownership
 and the explicit copper mode are preserved. Existing vias are never moved.
+
+## Adaptive fill density
+
+The **Adaptive fill density** checkbox is optional and defaults to off. It uses
+an immutable snapshot of actual track, arc and pad copper contours on **all
+enabled copper layers and all nets**. Zones, vias, labels and component outlines
+do not contribute. Distance is measured from the copper edge, including trace
+width and pad shape, in coordinates normalized by the nominal X/Y spacings.
+
+- **Start thinning at distance (%)**: default **100%**, minimum **100%**. Up to
+  this distance the local nominal spacing remains unchanged.
+- **Full thinning at distance (%)**: default **300%**, strictly greater than
+  the start. The spacing factor increases linearly between these distances.
+- **Maximum spacing factor**: default **3**, a positive integer. With 1.5 mm
+  spacing, factor 3 gives a local target of 4.5 mm beyond the full distance.
+
+The minimum/maximum tolerance percentages apply to this **local** spacing. The
+larger local factor of a candidate and an existing same-net via sets their pair
+spacing, preventing dense gaps from being added beside sparse-area vias. Density
+spacing remains local to an independent free region, preserving the new engine's
+separation of placement groups; physical drilled-hole constraints remain global.
+Existing vias are not moved or removed. The geometric gap search uses the same
+field, so it cannot refill sparse areas to the old dense pitch. This new engine
+has no fixed global raster and no separate refill pass; adaptive density scales
+its preferred local spacing rather than thinning rows of the old grid engine.
+
+The settings are saved per zone. Old configurations without the option remain
+disabled; previous `SparseGrid` density settings are recognized. Non-finite
+inputs, a start below 100%, an end at/below the start, non-integer factors and
+coordinate-overflow dimensions are rejected before board changes. Geometry and
+density preparation share the cancellable pulsing progress dialog.
+
+This is a **geometric heuristic**, not a simulation or a statement about current
+flow, return paths, RF behavior or whether a particular area needs stitching.
 
 ## Existing foreign copper
 
@@ -86,6 +124,7 @@ wxFormBuilder. Compile language catalogs with `python3 locale_setup.py`.
 python3 -m unittest discover -s tests -v
 # Using KiCad's bundled Python (wx/pcbnew):
 python3 tests/native_regressions.py
+python3 tests/native_density.py
 ```
 
 Independent verification uses an isolated test environment with Shapely/SciPy;

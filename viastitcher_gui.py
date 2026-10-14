@@ -131,6 +131,58 @@ class viastitcher_gui ( wx.Dialog ):
 
 		bSizer1 = wx.BoxSizer( wx.VERTICAL )
 
+		self.m_chkSparse = wx.CheckBox( self, wx.ID_ANY, _(u"Adaptive fill density"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_chkSparse.SetToolTip( _(u"Increase spacing in areas far from tracks and pads. Zones and vias do not affect density.") )
+
+		bSizer1.Add( self.m_chkSparse, 0, wx.ALL|wx.EXPAND, 5 )
+
+		fgDensity = wx.FlexGridSizer( 0, 2, 0, 0 )
+		fgDensity.AddGrowableCol( 1 )
+		fgDensity.SetFlexibleDirection( wx.BOTH )
+		fgDensity.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_SPECIFIED )
+
+		self.m_lblDensityStart = wx.StaticText( self, wx.ID_ANY, _(u"Start thinning at distance (%)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblDensityStart.Wrap( -1 )
+
+		self.m_lblDensityStart.SetToolTip( _(u"At least 100%. Up to this distance from track/pad copper, the nominal spacing applies.") )
+
+		fgDensity.Add( self.m_lblDensityStart, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtDensityStart = wx.TextCtrl( self, wx.ID_ANY, _(u"100"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtDensityStart.SetToolTip( _(u"At least 100%. Up to this distance from track/pad copper, the nominal spacing applies.") )
+		self.m_txtDensityStart.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgDensity.Add( self.m_txtDensityStart, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_lblDensityEnd = wx.StaticText( self, wx.ID_ANY, _(u"Full thinning at distance (%)"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblDensityEnd.Wrap( -1 )
+
+		self.m_lblDensityEnd.SetToolTip( _(u"Must exceed the start distance. Between start and full distance, the spacing factor increases linearly.") )
+
+		fgDensity.Add( self.m_lblDensityEnd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtDensityEnd = wx.TextCtrl( self, wx.ID_ANY, _(u"300"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtDensityEnd.SetToolTip( _(u"Must exceed the start distance. Between start and full distance, the spacing factor increases linearly.") )
+		self.m_txtDensityEnd.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgDensity.Add( self.m_txtDensityEnd, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_lblDensityMultiple = wx.StaticText( self, wx.ID_ANY, _(u"Maximum spacing factor"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_lblDensityMultiple.Wrap( -1 )
+
+		self.m_lblDensityMultiple.SetToolTip( _(u"Positive integer. Factor 3 changes 1.5 mm spacing to 4.5 mm in empty areas.") )
+
+		fgDensity.Add( self.m_lblDensityMultiple, 0, wx.ALL|wx.EXPAND, 5 )
+
+		self.m_txtDensityMultiple = wx.TextCtrl( self, wx.ID_ANY, _(u"3"), wx.DefaultPosition, wx.DefaultSize, 0 )
+		self.m_txtDensityMultiple.SetToolTip( _(u"Positive integer. Factor 3 changes 1.5 mm spacing to 4.5 mm in empty areas.") )
+		self.m_txtDensityMultiple.SetMinSize( wx.Size( 120,-1 ) )
+
+		fgDensity.Add( self.m_txtDensityMultiple, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+		bSizer1.Add( fgDensity, 0, wx.ALL|wx.EXPAND, 5 )
+
 		fgAdaptive = wx.FlexGridSizer( 0, 3, 0, 0 )
 		fgAdaptive.AddGrowableCol( 1 )
 		fgAdaptive.AddGrowableCol( 2 )
@@ -143,13 +195,13 @@ class viastitcher_gui ( wx.Dialog ):
 		fgAdaptive.Add( self.m_lblAdaptiveLimits, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtMinSpacing = wx.TextCtrl( self, wx.ID_ANY, _(u"80"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_txtMinSpacing.SetToolTip( _(u"Minimum via-center spacing as a percentage of nominal X/Y spacing. Existing same-net vias count too.") )
+		self.m_txtMinSpacing.SetToolTip( _(u"Minimum via-center spacing as a percentage of local X/Y spacing, including adaptive density. Existing same-net vias count too.") )
 		self.m_txtMinSpacing.SetMinSize( wx.Size( 120,-1 ) )
 
 		fgAdaptive.Add( self.m_txtMinSpacing, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtMaxSpacing = wx.TextCtrl( self, wx.ID_ANY, _(u"150"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_txtMaxSpacing.SetToolTip( _(u"Maximum target neighbor spacing as a percentage of nominal X/Y spacing. Obstacles can make this target impossible.") )
+		self.m_txtMaxSpacing.SetToolTip( _(u"Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible.") )
 		self.m_txtMaxSpacing.SetMinSize( wx.Size( 120,-1 ) )
 
 		fgAdaptive.Add( self.m_txtMaxSpacing, 0, wx.ALL|wx.EXPAND, 5 )

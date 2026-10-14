@@ -57,6 +57,7 @@ jobs:
             __init__.py \
             defaults.json \
             geometric_engine.py \
+            density_field.py \
             native_geometry.py \
             project_rules.py \
             localization.py \

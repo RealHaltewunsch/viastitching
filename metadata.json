@@ -1,8 +1,8 @@
 {
   "$schema": "https://go.kicad.org/pcm/schemas/v2",
   "name": "ViaStitcher",
-  "description": "Place stitching vias in free copper gaps with configurable spacing tolerance.",
-  "description_full": "Geometry-led stitching vias in filled copper: centers of free gaps, local nominal spacing with tolerance, and physical clearance checks. Experimental native KiCad 10 build.",
+  "description": "Geometry-led via placement with optional adaptive fill density.",
+  "description_full": "New geometric placement engine: centers of free gaps, spacing tolerance, clearance checks and optional adaptive fill density based on track/pad copper proximity. Experimental native KiCad 10 build.",
   "identifier": "com.github.weirdgyn.viastitcher",
   "type": "plugin",
   "author": {
@@ -13,12 +13,12 @@
   },
   "license": "MIT",
   "resources": {
-    "homepage": "https://github.com/RealHaltewunsch/viastitching",
+    "homepage": "https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density",
     "repository": "https://github.com/RealHaltewunsch/viastitching"
   },
   "versions": [
     {
-      "version": "0.5.0",
+      "version": "0.5.1",
       "version_epoch": 0,
       "status": "testing",
       "kicad_version": "10.0",

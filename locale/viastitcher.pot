@@ -108,3 +108,36 @@ msgstr ""
 
 msgid "Invalid placement settings: {error}"
 msgstr ""
+
+msgid "Adaptive fill density"
+msgstr ""
+
+msgid "Start thinning at distance (%)"
+msgstr ""
+
+msgid "Full thinning at distance (%)"
+msgstr ""
+
+msgid "Maximum spacing factor"
+msgstr ""
+
+msgid "Building adaptive density field..."
+msgstr ""
+
+msgid "Increase spacing in areas far from tracks and pads. Zones and vias do not affect density."
+msgstr ""
+
+msgid "At least 100%. Up to this distance from track/pad copper, the nominal spacing applies."
+msgstr ""
+
+msgid "Must exceed the start distance. Between start and full distance, the spacing factor increases linearly."
+msgstr ""
+
+msgid "Positive integer. Factor 3 changes 1.5 mm spacing to 4.5 mm in empty areas."
+msgstr ""
+
+msgid "Minimum via-center spacing as a percentage of local X/Y spacing, including adaptive density. Existing same-net vias count too."
+msgstr ""
+
+msgid "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
+msgstr ""

@@ -14,10 +14,11 @@ from .viastitcher_gui import viastitcher_gui
 from .localization import _
 from .geometric_engine import Engine, Cancelled
 from .native_geometry import BoardGeometry, point as geometry_point
+from .density_field import board_density, validate_density
 
 import json
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.
@@ -141,6 +142,12 @@ class ViaStitcherDialog(viastitcher_gui):
         self.m_txtMinSpacing.SetValue(str(defaults.get("MinSpacingPercent", "80")))
         self.m_txtMaxSpacing.SetValue(str(defaults.get("MaxSpacingPercent", "150")))
 
+        self.m_chkSparse.SetValue(defaults.get("AdaptiveDensity",defaults.get("SparseGrid",False)))
+        for name,key,default in (("DensityStart","DensityStartPercent","100"),("DensityEnd","DensityEndPercent","300"),("DensityMultiple","DensityMultiple","3")):
+            getattr(self,"m_txt"+name).SetValue(str(defaults.get(key,default)))
+        self.m_chkSparse.Bind(wx.EVT_CHECKBOX,self.onDensityChanged)
+        self.onDensityChanged()
+
         # Get default Vias dimensions
         via_size = None
         via_drill = None
@@ -257,6 +264,10 @@ class ViaStitcherDialog(viastitcher_gui):
             # commit.Push()
             pcbnew.Refresh()
 
+    def onDensityChanged(self,event=None):
+        for name in ("DensityStart","DensityEnd","DensityMultiple"):
+            getattr(self,"m_txt"+name).Enable(self.m_chkSparse.GetValue())
+
     def _read_fill_settings(self):
         def number(control):
             value=float(control.GetValue())
@@ -272,9 +283,14 @@ class ViaStitcherDialog(viastitcher_gui):
             "maximum":number(self.m_txtMaxSpacing)/100,
         }
         s=self.fill_settings
+        s["density_enabled"]=self.m_chkSparse.GetValue()
+        s["density_start"]=number(self.m_txtDensityStart)/100 if s["density_enabled"] else 1
+        s["density_end"]=number(self.m_txtDensityEnd)/100 if s["density_enabled"] else 3
+        s["density_multiple"]=number(self.m_txtDensityMultiple) if s["density_enabled"] else 3
+        validate_density(s["density_start"],s["density_end"],s["density_multiple"])
         if not 0<s["drill"]<s["diameter"] or min(s["pitch"])<=0 or min(s["clearance"],s["object_clearance"])<0:raise ValueError("Invalid dimensions")
         if not 0<s["minimum"]<=1<=s["maximum"]:raise ValueError("Invalid tolerance")
-        if max(s["pitch"])*s["maximum"]>=2**31-1 or max(s["diameter"],s["clearance"],s["object_clearance"])>=2**30:raise ValueError("Dimensions exceed KiCad coordinate range")
+        if max(s["pitch"])*s["maximum"]*(s["density_multiple"] if s["density_enabled"] else 1)>=2**31-1 or max(s["diameter"],s["clearance"],s["object_clearance"])>=2**30:raise ValueError("Dimensions exceed KiCad coordinate range")
         design=self.board.GetDesignSettings()
         if s["diameter"]<getattr(design,"m_ViasMinSize",0) or s["drill"]<getattr(design,"m_MinThroughDrill",0) or s["diameter"]-s["drill"]<2*getattr(design,"m_ViasMinAnnularWidth",0):raise ValueError("Via dimensions are below the board minimums")
         if not self.m_cbNet.GetStringSelection():raise ValueError("No net selected")
@@ -295,6 +311,10 @@ class ViaStitcherDialog(viastitcher_gui):
         s=self.fill_settings
         self._geometry=BoardGeometry(self.board,self.area,self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection()),s["diameter"],s["drill"],s["clearance"],self.m_chkAllCopperLayers.GetValue(),s["object_clearance"],pulse=lambda stage,n:self._pulse(_("Finding free copper regions...")))
 
+        self._density=None
+        if s["density_enabled"] and s["density_multiple"]>1:
+            self._density=board_density(self.board,s["pitch"],s["density_start"],s["density_end"],s["density_multiple"],origin=self._geometry.origin,pulse=lambda n:self._pulse(_("Building adaptive density field...")))
+
     def _place_geometric_via(self,position):
         s=self.fill_settings;via=pcbnew.PCB_VIA(self.board)
         via.SetPosition(geometry_point(position));via.SetLayerPair(pcbnew.F_Cu,pcbnew.B_Cu)
@@ -310,7 +330,7 @@ class ViaStitcherDialog(viastitcher_gui):
         try:
             if not hasattr(self,"_geometry"):self._prepare_geometry()
             s=self.fill_settings;g=self._geometry
-            solver=Engine(g.backend,s["pitch"],s["minimum"],s["maximum"],pulse=lambda stats:self._pulse(_("Placing vias: {count} · Regions: {regions}").format(count=stats.placed,regions=stats.regions)),physical_radius=g.pair_radius)
+            solver=Engine(g.backend,s["pitch"],s["minimum"],s["maximum"],pulse=lambda stats:self._pulse(_("Placing vias: {count} · Regions: {regions}").format(count=stats.placed,regions=stats.regions)),physical_radius=g.pair_radius,density=self._density)
             for shape,anchors in g.regions():
                 for position in solver.run_region(shape,anchors):self._place_geometric_via(position)
             wx.MessageBox(_("Placed vias: {count}\nProcessed free regions: {regions}\nPlacement completed.").format(count=solver.stats.placed,regions=solver.stats.regions))
@@ -360,6 +380,11 @@ class ViaStitcherDialog(viastitcher_gui):
             "Clearance": self.m_txtClearance.GetValue(),
             "FillStyle": "Geometric",
             "PlacementEngine": "Geometric",
+            "AdaptiveDensity": self.m_chkSparse.GetValue(),
+            "SparseGrid": self.m_chkSparse.GetValue(),
+            "DensityStartPercent": self.m_txtDensityStart.GetValue(),
+            "DensityEndPercent": self.m_txtDensityEnd.GetValue(),
+            "DensityMultiple": self.m_txtDensityMultiple.GetValue(),
             "ObjectClearance": self.m_txtObjectClearance.GetValue(),
             "RequireAllCopperLayers": self.m_chkAllCopperLayers.GetValue(),
             "MinSpacingPercent": self.m_txtMinSpacing.GetValue(),

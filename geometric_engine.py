@@ -120,18 +120,28 @@ class PlacementStats:
 class Cancelled(Exception): pass
 
 class Engine:
-    def __init__(self,backend,pitch,minimum=.8,maximum=1.5,pulse=None,physical_radius=0):
+    def __init__(self,backend,pitch,minimum=.8,maximum=1.5,pulse=None,physical_radius=0,density=None):
         if any(not isinstance(v,int) or v<=0 for v in pitch):raise ValueError('Positive integer pitch required')
         if not isfinite(float(minimum)) or not isfinite(float(maximum)) or not 0<float(minimum)<=1<=float(maximum):raise ValueError('Invalid distance limits')
+        self.density=density if density is not None and density.multiple>1 else None
         self.backend=backend;self.pitch=pitch;self.minimum=minimum;self.maximum=maximum
         self.pulse=pulse or (lambda stats:True);self.stats=PlacementStats()
         self.physical=Spacing((max(1,physical_radius),)*2,1);self.physical_radius=physical_radius
         self.envelopes={};self.active_envelopes=[]
+    def spacing(self, minimum):
+        return self.density.spacing(minimum) if self.density else Spacing(self.pitch,minimum)
+    def radii(self, index, p):
+        return index.radii(p) if self.density else (index.rx,index.ry)
+    def centers(self, poly):
+        if self.density:
+            yield from sorted(dict.fromkeys(poly.centers()),key=self.density.factor)
+        else:
+            yield from poly.centers()
     def tick(self):
         if not self.pulse(self.stats):self.stats.cancelled=True;raise Cancelled()
     def find(self,shape,index,preferred=None,maximum_from=None):
         stack=[shape]
-        limit=Spacing(self.pitch,self.maximum) if maximum_from is not None else None
+        limit=self.spacing(self.maximum) if maximum_from is not None else None
         while stack:
             self.tick();piece=stack.pop()
             for poly in self.backend.polygons(piece):
@@ -140,12 +150,13 @@ class Engine:
                 hi,tp=(c//STEP)*STEP,(d//STEP)*STEP
                 if lo>hi or bt>tp:continue
                 bounds=(lo,bt,hi,tp)
-                if limit is not None:
+                if limit is not None and self.density and limit.outside_box(bounds,maximum_from):continue
+                if limit is not None and not self.density:
                     closest=(max(lo,min(hi,maximum_from[0])),max(bt,min(tp,maximum_from[1])))
                     if not limit.within(closest,maximum_from):continue
                 if index.covers_box(bounds) or (self.physical_radius and self.physical.covers_box(self.backend.world_bounds(bounds))) or any(e.covers_box(self.backend.world_bounds(bounds)) for e in self.active_envelopes):continue
                 seen=set()
-                candidates=chain((preferred,) if preferred is not None else (),poly.centers())
+                candidates=chain((preferred,) if preferred is not None else (),self.centers(poly))
                 if lo==hi and bt==tp:candidates=chain(((lo,bt),),candidates)
                 for p in candidates:
                     if p in seen:continue
@@ -167,10 +178,10 @@ class Engine:
         return None
     def run_region(self,shape,anchors=()):
         self.active_envelopes=[self.envelopes.setdefault(key,Spacing((radius,radius),1)) for key,radius in getattr(self.backend,"active_envelopes",())]
-        self.stats.regions+=1;index=Spacing(self.pitch,self.minimum)
+        self.stats.regions+=1;index=self.spacing(self.minimum)
         for p in sorted(anchors):index.add(p)
         remaining=self.backend.copy(shape)
-        for p in index.points:remaining=self.backend.subtract_disk(remaining,p,index.rx,index.ry)
+        for p in index.points:remaining=self.backend.subtract_disk(remaining,p,*self.radii(index,p))
         ox,oy=self.backend.world((0,0))
         for e in self.active_envelopes:
             for world in e.nearby(self.backend.world_bounds(self.backend.bounds(shape))):remaining=self.backend.subtract_disk(remaining,(world[0]-ox,world[1]-oy),e.rx,e.ry)
@@ -183,10 +194,13 @@ class Engine:
                 ideal,parent=queue.popleft()
                 if ideal in seen:continue
                 seen.add(ideal)
-                shift=max(.05,float(self.maximum)-1)
+                scale=self.density.multiple if self.density else 1
+                shift=max(.05,float(self.maximum)-1)*(float(self.density.factor(parent)) if self.density else 1)
                 rx,ry=int(self.pitch[0]*shift),int(self.pitch[1]*shift)
                 local=self.backend.clip(remaining,(ideal[0]-rx,ideal[1]-ry,ideal[0]+rx,ideal[1]+ry))
-                local=self.backend.within_disk(local,parent,int(self.pitch[0]*float(self.maximum)),int(self.pitch[1]*float(self.maximum)))
+                if self.density:
+                    scale=float(max(self.density.factor(parent),self.density.upper_factor((ideal[0]-rx,ideal[1]-ry,ideal[0]+rx,ideal[1]+ry))))
+                local=self.backend.within_disk(local,parent,int(self.pitch[0]*float(self.maximum)*scale),int(self.pitch[1]*float(self.maximum)*scale))
                 if self.backend.empty(local):continue
                 p=self.find(local,index,preferred=ideal,maximum_from=parent)
                 if p is not None:break
@@ -198,9 +212,10 @@ class Engine:
             for e in self.active_envelopes:e.add(world)
             self.stats.placed+=1
             yield world
-            remaining=self.backend.subtract_disk(remaining,p,index.rx,index.ry)
+            remaining=self.backend.subtract_disk(remaining,p,*self.radii(index,p))
             for e in self.active_envelopes:
-                if e.rx>min(index.sx,index.sy)*index.minimum:remaining=self.backend.subtract_disk(remaining,p,e.rx,e.ry)
-            sx,sy=self.pitch
+                if e.rx>min(self.radii(index,p)):remaining=self.backend.subtract_disk(remaining,p,e.rx,e.ry)
+            factor=self.density.factor(p) if self.density else 1
+            sx,sy=(nearest(value*factor) for value in self.pitch) if self.density else self.pitch
             for dx,dy in ((sx,0),(0,sy),(-sx,0),(0,-sy)):
                 queue.append(((nearest(p[0]+dx),nearest(p[1]+dy)),p))

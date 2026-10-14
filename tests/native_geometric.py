@@ -35,7 +35,11 @@ def run(name,out):
   return True
  g=geo.BoardGeometry(b,z,z.GetNetCode(),pcbnew.FromMM(.6),pcbnew.FromMM(.3),pcbnew.FromMM(.1),all_layers=('--all' in sys.argv),object_clearance=0,pulse=pulse)
  built=time.monotonic()-start
- solver=engine.Engine(g.backend,(pcbnew.FromMM(1.5),)*2,pulse=lambda s:pulse('Place',s.placed),physical_radius=g.pair_radius)
+ density=None
+ if '--density' in sys.argv:
+  density_module=importlib.import_module(pkg.__name__+'.density_field')
+  density=density_module.board_density(b,(1500000,1500000),origin=g.origin,pulse=lambda n:pulse('Density',n))
+ solver=engine.Engine(g.backend,(pcbnew.FromMM(1.5),)*2,pulse=lambda s:pulse('Place',s.placed),physical_radius=g.pair_radius,density=density)
  pts=[];stats=[]
  for shape,anchors in g.regions():
   added=list(solver.run_region(shape,anchors));pts.extend(added);stats.append({'new':len(added),'anchors':anchors,'positions':added,'polygons':[asdict(p) for p in g.backend.polygons(shape)]})
@@ -52,7 +56,7 @@ def run(name,out):
  for ext in ('.kicad_pro','.kicad_dru'):
   f=source.with_suffix(ext)
   if f.exists():shutil.copy2(f,out/('geometry'+ext))
- result={'origin':g.origin,'name':name,'count':len(pts),'build_seconds':built,'seconds':duration,'stats':vars(solver.stats),'regions':stats,'positions':pts,'ids':ids}
+ result={'origin':g.origin,'name':name,'count':len(pts),'build_seconds':built,'seconds':duration,'stats':vars(solver.stats),'regions':stats,'positions':pts,'ids':ids,'adaptive_density':bool(density)}
  (out/'result.json').write_text(json.dumps(result))
  print(name,'COMPLETE',len(pts),round(duration,3),vars(solver.stats),flush=True)
 if __name__=='__main__':

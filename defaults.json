@@ -6,5 +6,10 @@
   "MinSpacingPercent": "80",
   "MaxSpacingPercent": "150",
   "RequireAllCopperLayers": false,
-  "PlacementEngine": "Geometric"
+  "PlacementEngine": "Geometric",
+  "AdaptiveDensity": false,
+  "SparseGrid": false,
+  "DensityStartPercent": "100",
+  "DensityEndPercent": "300",
+  "DensityMultiple": "3"
 }
