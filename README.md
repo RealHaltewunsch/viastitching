@@ -46,16 +46,23 @@ and the explicit copper mode are preserved. Existing vias are never moved.
 
 The **Adaptive fill density** checkbox is optional and defaults to off. It uses
 an immutable snapshot of actual track, arc and pad copper contours on **all
-enabled copper layers and all nets**. Zones, vias, labels and component outlines
-do not contribute. Distance is measured from the copper edge, including trace
-width and pad shape, in coordinates normalized by the nominal X/Y spacings.
+enabled copper layers and all nets**. Frozen permitted-area boundaries also
+protect outer edges, holes and disconnected islands. Density uses the smaller
+distance to track/pad copper or an area boundary, in normalized X/Y coordinates.
+Zone interiors, via proximity, labels and mechanical component outlines are not
+additional copper-proximity features. Generated same-net vias do not change the
+frozen field. See [interior-only placement and validation](docs/interior-density.md).
 
 - **Start thinning at distance (%)**: default **100%**, minimum **100%**. Up to
-  this distance the local nominal spacing remains unchanged.
+  this distance from copper **or an area edge**, the local nominal spacing remains unchanged.
 - **Full thinning at distance (%)**: default **300%**, strictly greater than
   the start. The spacing factor increases linearly between these distances.
 - **Maximum spacing factor**: default **3**, a positive integer. With 1.5 mm
   spacing, factor 3 gives a local target of 4.5 mm beyond the full distance.
+
+The dense bands near area edges and pads are placed **before** the sparse
+interior. This prevents sparse interior vias from consuming still-free dense
+edge positions. Narrow regions with no sufficiently deep interior stay dense.
 
 The minimum/maximum tolerance percentages apply to this **local** spacing. The
 larger local factor of a candidate and an existing same-net via sets their pair

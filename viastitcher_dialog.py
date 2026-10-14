@@ -18,7 +18,7 @@ from .density_field import board_density, validate_density
 
 import json
 
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.
@@ -288,6 +288,7 @@ class ViaStitcherDialog(viastitcher_gui):
         s["density_end"]=number(self.m_txtDensityEnd)/100 if s["density_enabled"] else 3
         s["density_multiple"]=number(self.m_txtDensityMultiple) if s["density_enabled"] else 3
         validate_density(s["density_start"],s["density_end"],s["density_multiple"])
+        if s["density_enabled"] and max(s["pitch"])*s["density_start"]>=2**30:raise ValueError("Density distance exceeds KiCad coordinate range")
         if not 0<s["drill"]<s["diameter"] or min(s["pitch"])<=0 or min(s["clearance"],s["object_clearance"])<0:raise ValueError("Invalid dimensions")
         if not 0<s["minimum"]<=1<=s["maximum"]:raise ValueError("Invalid tolerance")
         if max(s["pitch"])*s["maximum"]*(s["density_multiple"] if s["density_enabled"] else 1)>=2**31-1 or max(s["diameter"],s["clearance"],s["object_clearance"])>=2**30:raise ValueError("Dimensions exceed KiCad coordinate range")
@@ -313,7 +314,7 @@ class ViaStitcherDialog(viastitcher_gui):
 
         self._density=None
         if s["density_enabled"] and s["density_multiple"]>1:
-            self._density=board_density(self.board,s["pitch"],s["density_start"],s["density_end"],s["density_multiple"],origin=self._geometry.origin,pulse=lambda n:self._pulse(_("Building adaptive density field...")))
+            self._density=board_density(self.board,s["pitch"],s["density_start"],s["density_end"],s["density_multiple"],origin=self._geometry.origin,boundaries=self._geometry.backend.polygons(self._geometry.topology),pulse=lambda n:self._pulse(_("Building adaptive density field...")))
 
     def _place_geometric_via(self,position):
         s=self.fill_settings;via=pcbnew.PCB_VIA(self.board)

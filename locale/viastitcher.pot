@@ -141,3 +141,9 @@ msgstr ""
 
 msgid "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
 msgstr ""
+
+msgid "Thin only deep inside free areas. Keep nominal spacing near tracks, pads, area edges and holes; place dense edge bands first."
+msgstr ""
+
+msgid "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."
+msgstr ""

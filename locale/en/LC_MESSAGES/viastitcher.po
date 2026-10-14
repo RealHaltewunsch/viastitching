@@ -257,3 +257,9 @@ msgstr "Minimum via-center spacing as a percentage of local X/Y spacing, includi
 
 msgid "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
 msgstr "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
+
+msgid "Thin only deep inside free areas. Keep nominal spacing near tracks, pads, area edges and holes; place dense edge bands first."
+msgstr "Thin only deep inside free areas. Keep nominal spacing near tracks, pads, area edges and holes; place dense edge bands first."
+
+msgid "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."
+msgstr "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."

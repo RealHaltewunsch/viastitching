@@ -132,7 +132,7 @@ class viastitcher_gui ( wx.Dialog ):
 		bSizer1 = wx.BoxSizer( wx.VERTICAL )
 
 		self.m_chkSparse = wx.CheckBox( self, wx.ID_ANY, _(u"Adaptive fill density"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_chkSparse.SetToolTip( _(u"Increase spacing in areas far from tracks and pads. Zones and vias do not affect density.") )
+		self.m_chkSparse.SetToolTip( _(u"Thin only deep inside free areas. Keep nominal spacing near tracks, pads, area edges and holes; place dense edge bands first.") )
 
 		bSizer1.Add( self.m_chkSparse, 0, wx.ALL|wx.EXPAND, 5 )
 
@@ -144,12 +144,12 @@ class viastitcher_gui ( wx.Dialog ):
 		self.m_lblDensityStart = wx.StaticText( self, wx.ID_ANY, _(u"Start thinning at distance (%)"), wx.DefaultPosition, wx.DefaultSize, 0 )
 		self.m_lblDensityStart.Wrap( -1 )
 
-		self.m_lblDensityStart.SetToolTip( _(u"At least 100%. Up to this distance from track/pad copper, the nominal spacing applies.") )
+		self.m_lblDensityStart.SetToolTip( _(u"At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge.") )
 
 		fgDensity.Add( self.m_lblDensityStart, 0, wx.ALL|wx.EXPAND, 5 )
 
 		self.m_txtDensityStart = wx.TextCtrl( self, wx.ID_ANY, _(u"100"), wx.DefaultPosition, wx.DefaultSize, 0 )
-		self.m_txtDensityStart.SetToolTip( _(u"At least 100%. Up to this distance from track/pad copper, the nominal spacing applies.") )
+		self.m_txtDensityStart.SetToolTip( _(u"At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge.") )
 		self.m_txtDensityStart.SetMinSize( wx.Size( 120,-1 ) )
 
 		fgDensity.Add( self.m_txtDensityStart, 0, wx.ALL|wx.EXPAND, 5 )

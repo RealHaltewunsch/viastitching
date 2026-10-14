@@ -14,8 +14,8 @@ assert offset==len(r['positions'])
 data={'origin':g.origin,'pitch':[1500000,1500000],'minimum':[4,5],'physical_radius':g.pair_radius,'regions':records,'all_positions':r['positions']}
 if r.get('adaptive_density'):
  density_module=importlib.import_module(pkg.__name__+'.density_field')
- field=density_module.board_density(b,(1500000,1500000),origin=g.origin)
+ field=density_module.board_density(b,(1500000,1500000),origin=g.origin,boundaries=g.backend.polygons(g.topology))
  # Normalized contours are exported to the independent Shapely verifier.
- data['density']={'start':field.start,'end':field.end,'multiple':field.multiple,'polygons':[asdict(p) for p in field.polygons]}
+ data['density']={'start':field.start,'end':field.end,'multiple':field.multiple,'polygons':[asdict(p) for p in field.polygons],'boundaries':[asdict(p) for p in field.boundaries]}
 (out/'audit-data.json').write_text(json.dumps(data))
 print(name,'center-domain snapshot ready',flush=True)

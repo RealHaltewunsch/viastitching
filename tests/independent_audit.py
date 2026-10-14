@@ -19,9 +19,13 @@ origin=data['origin'];physical=data['physical_radius'];allp=data['all_positions'
 physical_tree=cKDTree(allp)
 density=data.get('density');multiple=density['multiple'] if density else 1
 copper=unary_union([Polygon(p['outer'],p['holes']) for p in density['polygons']]) if density else None
+boundaries=unary_union([Polygon(p['outer'],p['holes']).boundary for p in density.get('boundaries',[])]) if density else None
 factor_cache={}
 def density_distance(p):
- return min(density['end'],Point(p[0]/sx,p[1]/sy).distance(copper)) if copper is not None and not copper.is_empty else density['end']
+ point=Point(p[0]/sx,p[1]/sy);dist=density['end']
+ if copper is not None and not copper.is_empty:dist=min(dist,point.distance(copper))
+ if boundaries is not None and not boundaries.is_empty:dist=min(dist,point.distance(boundaries))
+ return dist
 def factor_distance(distance):
  return 1+(multiple-1)*min(1,max(0,(distance-density['start'])/(density['end']-density['start'])))
 def factor(p):

@@ -1,10 +1,15 @@
 # New geometric placement engine with adaptive fill density
 
 Feature branch: [`feature/geometric-adaptive-density`](https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density).
-Experimental PCM version: **0.5.1**, based on upstream master `d7eb10f` and the
+Experimental PCM version: **0.5.2**, based on upstream master `d7eb10f` and the
 new geometric-engine commit `05710ed`. The branch includes the complete placement
 rewrite: permitted via-center polygons, direct gap centers, local growth,
 0.01-mm positions, geometric remaining-area checks, and no separate refill pass.
+
+The current version thins **only in the interior**. Frozen permitted-area
+boundaries (including holes and disconnected islands) are also proximity
+features. Dense bands near pads and boundaries are placed first. See the
+[current interior-only validation](interior-density.md).
 
 ## Controls and distance model
 
@@ -18,10 +23,13 @@ previous `SparseGrid` settings are recognized.
 
 Actual track, arc and pad copper contours of all nets on all enabled copper
 layers form an immutable proximity field. Track widths, pad shapes and rotation
-are included. Zones, vias, component outlines and text have no influence.
+are included. Zone interiors are not copper-proximity features, but frozen
+permitted-area boundaries protect their edges and holes. Generated same-net
+vias, component outlines and text do not change this field.
 
 For nominal spacings `sx, sy`, distances use the normalized metric
-`sqrt((dx/sx)^2 + (dy/sy)^2)`. If copper-edge distance is `r`, the factor is
+`sqrt((dx/sx)^2 + (dy/sy)^2)`. If `r` is the smaller distance to track/pad copper or a permitted-area
+boundary, the factor is
 
 ```
 f(r) = 1 + (M - 1) * clamp((r - start) / (full - start), 0, 1)
@@ -51,7 +59,10 @@ paths. The pulsing progress dialog remains active through geometry, density-fiel
 construction and placement. Cancel preserves already placed vias and marks the
 operation incomplete. Grouping and Clear remain shared with ordinary placement.
 
-## Recorded validation — 14 October 2026
+## Initial 0.5.1 validation — before the interior-only rule
+
+The following figures document the earlier copper-proximity-only build. Current
+edge-protected results are recorded in [interior-density.md](interior-density.md).
 
 Native KiCad 10 Python/wx on macOS; three disposable PCB copies. Nominal spacing
 1.5 × 1.5 mm, 80/150% tolerance, 0.6/0.3 mm vias, edge margin 0.1 mm,

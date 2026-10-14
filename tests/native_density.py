@@ -64,6 +64,39 @@ def engine_checks():
  print('Near parity, factor-one parity, far reduction, unequal factor pairs, anchors, transition completion and translation PASS',flush=True)
 
 
+def boundary_checks():
+ pitch=(1500000,1500000);shape=rect(0,0,20,20)
+ field=Density.DensityField([],pitch,boundaries=geo.rings(shape))
+ field.protected=Density.protected_geometry(field)
+ solver=engine.Engine(geo.Backend(),pitch,density=field)
+ pts=list(solver.run_region(shape))
+ assert any(field.factor(p)==3 for p in pts),'No sparse interior placed'
+ assert any(field.factor(p)==1 for p in pts),'No dense edge band placed'
+ interior=False
+ for p in pts:
+  distance=min(p[0],p[1],20000000-p[0],20000000-p[1])/1500000
+  assert abs(field.distance(p)-min(3,distance))<1e-12
+  if distance<=1:assert field.factor(p)==1
+  if distance>1.01:interior=True
+  elif interior:raise AssertionError('Interior placement preceded the protected edge band')
+  if field.factor(p)>1:assert distance>1
+ check=field.spacing(.8)
+ for p in pts:assert check.allows(p);check.add(p)
+ # Ensure interior vias cannot consume a still-insertable dense edge position.
+ for x in range(0,20000001,50000):
+  for y in (0,500000,1000000,1500000,18500000,19000000,19500000,20000000):
+   assert not check.allows((x,y)),('Edge band unfilled',(x,y))
+ hole=rect(6,6,10,10);with_hole=geo.copy(shape);with_hole.BooleanSubtract(hole)
+ f=Density.DensityField([],pitch,boundaries=geo.rings(with_hole));f.protected=Density.protected_geometry(f)
+ assert f.factor((5000000,8000000))==1
+ assert f.protected.Contains(geo.point((5000000,8000000)))
+ strip=rect(0,0,2,10);f=Density.DensityField([],pitch,boundaries=geo.rings(strip));f.protected=Density.protected_geometry(f)
+ baseline=list(engine.Engine(geo.Backend(),pitch).run_region(strip))
+ guarded=list(engine.Engine(geo.Backend(),pitch,density=f).run_region(strip))
+ assert guarded==baseline,'Narrow island was thinned'
+ print('Dense edge band placed before sparse interior; holes, thin islands, local factors and edge coverage PASS',flush=True)
+
+
 def gui_checks():
  b,z=board_fixture();z.SetSelected()
  class Progress:
@@ -88,4 +121,4 @@ def gui_checks():
  print('Checkbox, default-off, lower bound, invalid limits, per-zone persistence and Clear PASS',flush=True)
 
 if __name__=='__main__':
- app=wx.App(False);contour_checks();engine_checks();gui_checks()
+ app=wx.App(False);contour_checks();engine_checks();boundary_checks();gui_checks()

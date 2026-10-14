@@ -258,3 +258,9 @@ msgstr "Distanza minima tra i centri in percentuale del passo X/Y locale, inclus
 
 msgid "Maximum target neighbor spacing as a percentage of local X/Y spacing, including adaptive density. Obstacles can make this target impossible."
 msgstr "Distanza massima obiettivo in percentuale del passo X/Y locale, inclusa la densità adattiva. Gli ostacoli possono renderla irrealizzabile."
+
+msgid "Thin only deep inside free areas. Keep nominal spacing near tracks, pads, area edges and holes; place dense edge bands first."
+msgstr "Dirada solo nelle parti interne delle aree libere. Mantieni il passo nominale vicino a piste, pad, bordi e aperture; riempi prima le fasce dense dei bordi."
+
+msgid "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."
+msgstr "Almeno 100%. Mantieni il passo nominale fino a questa distanza dal rame di piste e pad o da qualsiasi bordo dell’area di posizionamento."

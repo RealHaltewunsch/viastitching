@@ -7,7 +7,7 @@ g=geo.BoardGeometry(b,z,z.GetNetCode(),600000,300000,100000,object_clearance=0)
 record=json.loads((out/'result.json').read_text())
 density=None
 if record.get('adaptive_density'):
- density=importlib.import_module(pkg.__name__+'.density_field').board_density(b,(1500000,1500000),origin=g.origin)
+ density=importlib.import_module(pkg.__name__+'.density_field').board_density(b,(1500000,1500000),origin=g.origin,boundaries=g.backend.polygons(g.topology))
 solver=engine.Engine(g.backend,(1500000,1500000),physical_radius=g.pair_radius,density=density)
 positions=[p for shape,anchors in g.regions() for p in solver.run_region(shape,anchors)]
 expected=json.loads((out/'result.json').read_text())['positions']

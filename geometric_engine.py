@@ -185,9 +185,13 @@ class Engine:
         ox,oy=self.backend.world((0,0))
         for e in self.active_envelopes:
             for world in e.nearby(self.backend.world_bounds(self.backend.bounds(shape))):remaining=self.backend.subtract_disk(remaining,(world[0]-ox,world[1]-oy),e.rx,e.ry)
+        protected=getattr(self.density,'protected',None)
+        priority=self.backend.intersection(remaining,protected) if protected is not None else None
+        edge_stage=priority is not None
         queue=deque();seen=set()
         while not self.backend.empty(remaining):
             self.tick();p=None
+            search_area=priority if edge_stage else remaining
             # Grow on the nominal spacing from local accepted points. A blocked
             # ideal is projected to nearby geometry, never retried randomly.
             while queue:
@@ -197,14 +201,24 @@ class Engine:
                 scale=self.density.multiple if self.density else 1
                 shift=max(.05,float(self.maximum)-1)*(float(self.density.factor(parent)) if self.density else 1)
                 rx,ry=int(self.pitch[0]*shift),int(self.pitch[1]*shift)
-                local=self.backend.clip(remaining,(ideal[0]-rx,ideal[1]-ry,ideal[0]+rx,ideal[1]+ry))
+                local=self.backend.clip(search_area,(ideal[0]-rx,ideal[1]-ry,ideal[0]+rx,ideal[1]+ry))
                 if self.density:
                     scale=float(max(self.density.factor(parent),self.density.upper_factor((ideal[0]-rx,ideal[1]-ry,ideal[0]+rx,ideal[1]+ry))))
                 local=self.backend.within_disk(local,parent,int(self.pitch[0]*float(self.maximum)*scale),int(self.pitch[1]*float(self.maximum)*scale))
                 if self.backend.empty(local):continue
                 p=self.find(local,index,preferred=ideal,maximum_from=parent)
                 if p is not None:break
-            if p is None:p=self.find(remaining,index)
+            if p is None:p=self.find(search_area,index)
+            if p is None and edge_stage:
+                # The protected band is filled first under the same acceptance
+                # rules. Revisit its growth targets against the interior now.
+                edge_stage=False;seen.clear()
+                for parent in index.points:
+                    factor=self.density.factor(parent)
+                    sx,sy=(nearest(v*factor) for v in self.pitch)
+                    for dx,dy in ((sx,0),(0,sy),(-sx,0),(0,-sy)):
+                        queue.append(((nearest(parent[0]+dx),nearest(parent[1]+dy)),parent))
+                continue
             if p is None:break  # Geometric proof: no remaining lattice center.
             index.add(p)
             world=self.backend.world(p)
@@ -213,8 +227,11 @@ class Engine:
             self.stats.placed+=1
             yield world
             remaining=self.backend.subtract_disk(remaining,p,*self.radii(index,p))
+            if edge_stage:priority=self.backend.subtract_disk(priority,p,*self.radii(index,p))
             for e in self.active_envelopes:
-                if e.rx>min(self.radii(index,p)):remaining=self.backend.subtract_disk(remaining,p,e.rx,e.ry)
+                if e.rx>min(self.radii(index,p)):
+                    remaining=self.backend.subtract_disk(remaining,p,e.rx,e.ry)
+                    if edge_stage:priority=self.backend.subtract_disk(priority,p,e.rx,e.ry)
             factor=self.density.factor(p) if self.density else 1
             sx,sy=(nearest(value*factor) for value in self.pitch) if self.density else self.pitch
             for dx,dy in ((sx,0),(0,sy),(-sx,0),(0,-sy)):

@@ -38,7 +38,7 @@ def run(name,out):
  density=None
  if '--density' in sys.argv:
   density_module=importlib.import_module(pkg.__name__+'.density_field')
-  density=density_module.board_density(b,(1500000,1500000),origin=g.origin,pulse=lambda n:pulse('Density',n))
+  density=density_module.board_density(b,(1500000,1500000),origin=g.origin,boundaries=g.backend.polygons(g.topology),pulse=lambda n:pulse('Density',n))
  solver=engine.Engine(g.backend,(pcbnew.FromMM(1.5),)*2,pulse=lambda s:pulse('Place',s.placed),physical_radius=g.pair_radius,density=density)
  pts=[];stats=[]
  for shape,anchors in g.regions():

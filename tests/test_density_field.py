@@ -19,6 +19,19 @@ class DensityTests(unittest.TestCase):
   self.assertEqual(len(f.buckets),0);self.assertEqual(len(f.oversized),1)
   self.assertEqual(f.distance((500000000,500000000)),0)
   self.assertEqual(f.factor((-100000,0)),3)
+ def test_edges_holes_and_anisotropic_boundary_metric(self):
+  outer=rect(0,0,24000000,16000000)
+  f=density.DensityField([], (2000000,1000000),boundaries=[outer])
+  self.assertEqual(f.factor((2000000,8000000)),1)
+  self.assertEqual(f.factor((12000000,1000000)),1)
+  self.assertEqual(f.factor((4000000,8000000)),2)
+  self.assertEqual(f.factor((12000000,8000000)),3)
+  hole=rect(6000000,6000000,10000000,10000000)
+  f=density.DensityField([], (1000000,1000000),boundaries=[Polygon(outer.outer,(hole.outer,))])
+  self.assertEqual(f.factor((5000000,8000000)),1)
+  self.assertEqual(f.factor((4000000,8000000)),2)
+  f=density.DensityField([], (1500000,1500000),boundaries=[rect(0,0,2000000,20000000)])
+  self.assertEqual(f.factor((1000000,10000000)),1)
  def test_validation(self):
   for start,end,m in [(.99,3,3),(1,1,3),(3,2,3),(1,3,0),(1,3,1.5),(float('nan'),3,3),(1,float('inf'),3)]:
    with self.assertRaises(ValueError):density.validate_density(start,end,m)

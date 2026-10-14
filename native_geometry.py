@@ -63,6 +63,9 @@ class Backend:
     @staticmethod
     def empty(shape):return shape.OutlineCount()==0
     @staticmethod
+    def intersection(shape,other):
+        result=copy(shape);result.BooleanIntersection(other);return result
+    @staticmethod
     def clip(shape,bounds):
         a,b,c,d=map(int,bounds)
         if a>=c or b>=d:return pcbnew.SHAPE_POLY_SET()
