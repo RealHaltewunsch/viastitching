@@ -264,3 +264,9 @@ msgstr "Dirada solo nelle parti interne delle aree libere. Mantieni il passo nom
 
 msgid "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."
 msgstr "Almeno 100%. Mantieni il passo nominale fino a questa distanza dal rame di piste e pad o da qualsiasi bordo dell’area di posizionamento."
+
+msgid "Foreign copper connectivity"
+msgstr "Connessioni del rame di altre reti"
+
+msgid "Contour fronts"
+msgstr "Fronti dei contorni"

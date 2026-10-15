@@ -11,6 +11,12 @@ class GeometryTests(unittest.TestCase):
    moved=ring[k:]+ring[:k]
    self.assertEqual(canonical_ring(moved),canonical_ring(tuple(reversed(ring))))
    self.assertTrue(ring_contains((50,25),moved));self.assertFalse(ring_contains((120,25),moved))
+ def test_area_and_small_region_center(self):
+  p=Polygon(((0,0),(200000,0),(0,100000)))
+  self.assertEqual(p.area,10000000000)
+  self.assertEqual(next(p.centers()),(70000,30000))
+  hole=Polygon(((0,0),(100000,0),(100000,100000),(0,100000)),(((20000,20000),(80000,20000),(80000,80000),(20000,80000)),))
+  self.assertEqual(hole.area,6400000000)
  def test_hole(self):
   p=Polygon(((0,0),(100,0),(100,100),(0,100)),(((30,30),(70,30),(70,70),(30,70)),))
   self.assertTrue(p.contains((20,20)));self.assertFalse(p.contains((50,50)))

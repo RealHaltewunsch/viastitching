@@ -18,7 +18,7 @@ from .density_field import board_density, validate_density
 
 import json
 
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.
@@ -310,7 +310,7 @@ class ViaStitcherDialog(viastitcher_gui):
 
     def _prepare_geometry(self):
         s=self.fill_settings
-        self._geometry=BoardGeometry(self.board,self.area,self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection()),s["diameter"],s["drill"],s["clearance"],self.m_chkAllCopperLayers.GetValue(),s["object_clearance"],pulse=lambda stage,n:self._pulse(_("Finding free copper regions...")))
+        self._geometry=BoardGeometry(self.board,self.area,self.board.GetNetcodeFromNetname(self.m_cbNet.GetStringSelection()),s["diameter"],s["drill"],s["clearance"],self.m_chkAllCopperLayers.GetValue(),s["object_clearance"],pulse=lambda stage,n:self._pulse(_("Finding free copper regions...")+" "+_(stage)))
 
         self._density=None
         if s["density_enabled"] and s["density_multiple"]>1:

@@ -2,7 +2,7 @@
   "$schema": "https://go.kicad.org/pcm/schemas/v2",
   "name": "ViaStitcher",
   "description": "Geometry-led via placement with optional adaptive fill density.",
-  "description_full": "New geometric placement engine: centers of free gaps, spacing tolerance, clearance checks and optional adaptive fill density based on track/pad copper and free-area edge proximity, with dense edge bands placed first and shared minimum spacing across separate areas. Experimental native KiCad 10 build.",
+  "description_full": "Geometry-led placement: smallest areas first, gap centers and inward contour fronts, optional adaptive density in deep interiors, shared same-net minimum spacing, and foreign-zone terminal connectivity checks. Experimental KiCad 10 SWIG build.",
   "identifier": "com.github.weirdgyn.viastitcher",
   "type": "plugin",
   "author": {
@@ -13,12 +13,12 @@
   },
   "license": "MIT",
   "resources": {
-    "homepage": "https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density",
+    "homepage": "https://github.com/RealHaltewunsch/viastitching/tree/feature/perimeter-placement",
     "repository": "https://github.com/RealHaltewunsch/viastitching"
   },
   "versions": [
     {
-      "version": "0.5.3",
+      "version": "0.5.4",
       "version_epoch": 0,
       "status": "testing",
       "kicad_version": "10.0",

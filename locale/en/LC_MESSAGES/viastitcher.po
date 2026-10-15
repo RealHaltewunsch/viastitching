@@ -263,3 +263,9 @@ msgstr "Thin only deep inside free areas. Keep nominal spacing near tracks, pads
 
 msgid "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."
 msgstr "At least 100%. Keep nominal spacing up to this distance from track/pad copper or any placement-area edge."
+
+msgid "Foreign copper connectivity"
+msgstr "Foreign copper connectivity"
+
+msgid "Contour fronts"
+msgstr "Contour fronts"

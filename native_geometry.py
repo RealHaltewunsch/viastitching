@@ -4,7 +4,7 @@ import hashlib
 import pcbnew
 from pathlib import Path
 from .project_rules import ProjectRules
-from .geometric_engine import Polygon, canonical_ring, ring_contains, STEP
+from .geometric_engine import Polygon, canonical_ring, ring_contains, STEP, nearest
 
 ERROR=1000  # 0.001 mm polygon approximation, finer than candidate positions.
 GUARD=2000
@@ -54,7 +54,41 @@ class Backend:
     def world(self,p):return p[0]+self.origin[0],p[1]+self.origin[1]
     def world_bounds(self,b):
         a,y,c,d=b;ox,oy=self.origin;return a+ox,y+oy,c+ox,d+oy
-    def polygons(self,shape):return sorted(rings(shape),key=lambda p:p.bounds)
+    def polygons(self,shape):return sorted(rings(shape),key=lambda p:(p.area,p.bounds,p.outer,p.holes))
+    @staticmethod
+    def contains(shape,p):return shape.Contains(point(p))
+    def fronts(self,shape,pitch):
+        """Nested contour fronts in the anisotropic spacing metric.
+
+        Work proportional to perimeter and contour levels, never to 0.01-mm
+        board pixels. Regions already describe VIA CENTERS; no second erosion
+        by via diameter/clearance is applied here.
+        """
+        unit=min(pitch)
+        def scale(source,inverse=False):
+            return make(Polygon(tuple((int(round(x*pitch[0]/unit)),int(round(y*pitch[1]/unit))) if inverse else (int(round(x*unit/pitch[0])),int(round(y*unit/pitch[1]))) for x,y in source.outer),tuple(tuple((int(round(x*pitch[0]/unit)),int(round(y*pitch[1]/unit))) if inverse else (int(round(x*unit/pitch[0])),int(round(y*unit/pitch[1]))) for x,y in r) for r in source.holes)))
+        normalized=pcbnew.SHAPE_POLY_SET()
+        for poly in self.polygons(shape):normalized.Append(scale(poly))
+        a,b,c,d=self.bounds(normalized)
+        if min(c-a,d-b)<unit:
+            return list(dict.fromkeys(p for poly in self.polygons(shape) for p in poly.centers() if poly.contains(p)))
+        result=[];offset=max(STEP*2,ERROR*4)
+        while True:
+            getattr(self,"pulse",lambda *a:None)("Contour fronts",offset//unit)
+            front=inflate(normalized,-offset)
+            if self.empty(front):break
+            for poly in self.polygons(front):
+                for ring in (poly.outer,)+poly.holes:
+                    lengths=[math.hypot(ring[(i+1)%len(ring)][0]-p[0],ring[(i+1)%len(ring)][1]-p[1]) for i,p in enumerate(ring)]
+                    perimeter=sum(lengths);count=max(1,int(round(perimeter/unit)));spacing=perimeter/count
+                    edge=0;start=0
+                    for n in range(count):
+                        target=n*spacing
+                        while edge<len(ring)-1 and target>start+lengths[edge]:start+=lengths[edge];edge+=1
+                        p=ring[edge];q=ring[(edge+1)%len(ring)];t=(target-start)/max(1,lengths[edge])
+                        result.append((nearest(round((p[0]+t*(q[0]-p[0]))*pitch[0]/unit)),nearest(round((p[1]+t*(q[1]-p[1]))*pitch[1]/unit))))
+            offset+=unit
+        return list(dict.fromkeys(result))
     @staticmethod
     def bounds(shape):
         b=shape.BBox();return b.GetLeft(),b.GetTop(),b.GetRight(),b.GetBottom()
@@ -95,7 +129,7 @@ class BoardGeometry:
         # Local integer origin BEFORE offset/boolean operations removes absolute
         # board phase and avoids floating-point sums involving world positions.
         box=zone.GetBoundingBox();self.origin=(box.GetLeft()//STEP*STEP,box.GetTop()//STEP*STEP)
-        self.backend=Backend(self.origin)
+        self.backend=Backend(self.origin);self.backend.pulse=self.pulse_at
         self.layers=[l for l in board.GetEnabledLayers().Seq() if pcbnew.IsCopperLayer(l)]
         ds=board.GetDesignSettings()
         self.hole_gap=getattr(ds,'m_HoleToHoleMin',pcbnew.FromMM(.254))
@@ -112,8 +146,12 @@ class BoardGeometry:
         self.anchors=[];self.physical_holes=pcbnew.SHAPE_POLY_SET()
         self.pair_radius=drill+self.hole_gap
         self.envelope_regions=[]
+        # Imported here to avoid a module-level geometry/guard dependency cycle.
+        from .copper_guard import CopperGuard
+        self.guard=CopperGuard(self)
         self.topology=self.build()
         self.free=copy(self.topology);self.free.BooleanSubtract(self.physical_holes)
+        self.guard.prepare();self.backend.accepts=self.guard.allows;self.backend.accept=self.guard.commit;self.backend.forbidden_box=self.guard.forbidden_box
     @staticmethod
     def context(item):
         try:name=item.GetEffectiveNetClass().GetName()
@@ -194,8 +232,7 @@ class BoardGeometry:
                 if item.GetNetCode()!=self.netcode:margin=max(margin,radius+max(self.hole_clearance,max((self.required("hole_clearance",item,l) for l in self.layers),default=0),max((self.required("physical_hole_clearance",item,l) for l in self.layers),default=0))+GUARD)
                 item.TransformHoleToPolygon(poly,margin,ERROR,pcbnew.ERROR_OUTSIDE)
                 (self.physical_holes if item.GetNetCode()==self.netcode else obstacles).Append(self.local_shape(poly))
-        # Foreign filled copper is occupied geometry. Keeping it intact avoids
-        # splitting another net's narrow pour when KiCad refills around a new via.
+        # Foreign pours refill around vias; preserve their terminal connectivity.
         for z in self.board.Zones():
             self.pulse_at("Other copper fills",0)
             is_rule=z.GetIsRuleArea() if hasattr(z,'GetIsRuleArea') else z.GetIsKeepout()
@@ -203,19 +240,10 @@ class BoardGeometry:
             for l in set(z.GetLayerSet().Seq()) & set(self.layers):
                 fill=self.local_shape(z.GetFilledPolysList(l))
                 clearance=max(self.object_clearance,self.net_clearance[l],own_clearance(z,l),self.rules.inherited_clearance(self.rules.context(self.context(z))),self.required('clearance',z,l))
-                # Protect the boundary/neck band, not the whole power plane.
-                # A new clearance hole fully inside the eroded core leaves a
-                # surrounding copper annulus. Non-overlapping hole envelopes
-                # prevent a chain of newly drilled holes from splitting it.
-                thickness=z.GetMinThickness()
-                band=inflate(fill,radius+clearance+GUARD)
-                interior=inflate(fill,-radius-clearance-thickness-GUARD)
-                band.BooleanSubtract(interior);obstacles.Append(band)
-                if not self.backend.empty(interior):
-                    for pp in self.backend.polygons(fill):
-                        core=make(pp);core.BooleanIntersection(interior)
-                        key=hashlib.sha256(str((z.GetNetname(),l,pp.outer,pp.holes)).encode()).hexdigest()
-                        self.envelope_regions.append((key,core,2*(radius+clearance)+thickness+2*GUARD))
+                # Zone filling cuts clearance holes automatically. Preserve
+                # actual terminal connections instead of discarding a blanket
+                # boundary band or prohibiting overlapping hole envelopes.
+                self.guard.add(z.GetNetCode(),l,fill,clearance,z.GetMinThickness())
         for z in list(self.board.Zones())+[z for f in self.board.GetFootprints() for z in f.Zones()]:
             is_rule=z.GetIsRuleArea() if hasattr(z,'GetIsRuleArea') else z.GetIsKeepout()
             if is_rule and z.GetDoNotAllowVias() and set(z.GetLayerSet().Seq())&set(self.layers):obstacles.Append(inflate(self.local_shape(z.Outline()),radius+GUARD))

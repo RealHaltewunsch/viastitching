@@ -5,7 +5,7 @@ geometry-led engine. It is based on upstream master `d7eb10f`; the engine uses
 KiCad's native integer polygon operations and Python's standard library.
 The current build is tested with KiCad 10 on macOS.
 
-Feature branch: [`feature/geometric-adaptive-density`](https://github.com/RealHaltewunsch/viastitching/tree/feature/geometric-adaptive-density).
+Feature branch: [`feature/perimeter-placement`](https://github.com/RealHaltewunsch/viastitching/tree/feature/perimeter-placement).
 See [adaptive density settings and validation](docs/adaptive-density.md) for the
 new engine, controls, recorded PCB comparisons and limits. The current build
 also enforces [global same-net minimum spacing](docs/global-spacing.md).
@@ -17,7 +17,10 @@ also enforces [global same-net minimum spacing](docs/global-spacing.md).
 Fill the copper zones in PCB Editor, select the intended zone and run
 **Tools → External Plugins → ViaStitcher**. Set via diameter/drill and nominal
 horizontal/vertical spacing. The plugin identifies permitted via-center areas,
-starts in the middle of available gaps and grows on preferred nominal spacings.
+processes the smallest areas first. Small or narrow regions start at an interior
+center; larger regions follow nested contour fronts from their edges inward.
+Blocked contour targets fall back to local geometric gap centers on preferred
+nominal spacings.
 The nominal spacing has no global board-grid phase. Remaining regions are
 examined geometrically rather than by trying every point in a 0.01 mm raster.
 
@@ -88,13 +91,18 @@ flow, return paths, RF behavior or whether a particular area needs stitching.
 
 ## Existing foreign copper
 
-The engine protects the boundary and narrow-neck bands of foreign filled zones.
-A clearance hole fully inside a sufficiently broad foreign plane remains allowed
-when at least two other layers provide the selected net. A minimum physical
-spacing between new hole envelopes keeps those holes from forming a cut through
-that plane. This can impose more separation than a very small nominal pitch.
-These protections preserve existing copper rather than relying on a later fill
-silently cutting a narrow connection to another net.
+Foreign zone copper can refill around new vias. A blanket exclusion band around
+foreign fills previously discarded valid gaps; version 0.5.4 replaces it with
+checks of existing foreign-net pad/via connections. The minimum-width zone core,
+fixed tracks/pads/vias and alternative paths across layers are considered.
+Accepted holes are incorporated immediately. A split that only separates an
+unanchored copper fragment is permitted; breaking an existing terminal connection
+is rejected. Physical object clearances and via keepouts remain independent checks.
+
+See [perimeter placement and gap regression validation](docs/perimeter-placement.md).
+Earlier validation reports describe their historical releases; their claim of
+complete coverage applied to a too-conservative permitted domain and did not
+establish coverage of every actually usable PCB gap.
 
 ## Design rules
 

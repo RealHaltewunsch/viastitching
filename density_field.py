@@ -107,7 +107,12 @@ class DensityField:
         if key not in self.cache:
             # Fixed decimal factors keep pair decisions deterministic; candidate
             # coordinates and exact squared spacing comparisons stay integral.
-            self.cache[key] = Fraction(round(self._factor(self.distance(point))*FACTOR_SCALE), FACTOR_SCALE)
+            normalized=(point[0]/self.pitch[0],point[1]/self.pitch[1])
+            edge_distance=self.boundary_index.distance(normalized)
+            # An edge already inside the dense band proves factor=1. Avoid
+            # examining every nearby pad/track contour for these common points.
+            self.cache[key] = (Fraction(1) if edge_distance<=self.start else
+                               Fraction(round(self._factor(self.distance(point))*FACTOR_SCALE), FACTOR_SCALE))
         return self.cache[key]
 
     def lower_factor(self, bounds):
@@ -116,6 +121,8 @@ class DensityField:
         radius = math.hypot((c-a)/(2*self.pitch[0]), (d-b)/(2*self.pitch[1]))
         # Distance to a fixed closed set is 1-Lipschitz. A conservative factor
         # bound lets spacing disks reject whole rectangles without point scans.
+        edge=self.boundary_index.distance((center[0]/self.pitch[0],center[1]/self.pitch[1]))
+        if edge-radius<=self.start:return Fraction(1)
         lower = self._factor(max(0, self.distance(center)-radius))
         return Fraction(max(FACTOR_SCALE, math.floor(lower*FACTOR_SCALE)-1), FACTOR_SCALE)
 

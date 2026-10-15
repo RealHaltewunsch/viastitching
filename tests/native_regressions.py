@@ -36,6 +36,18 @@ def geometry_checks():
  combined=list(solver.run_region(a))+list(solver.run_region(b))
  assert combined==pa+pb,'Separated gap groups changed each other'
  print('Independent duplicate groups PASS',flush=True)
+ # Large areas start at inward perimeter fronts; small triangles start near
+ # their area centroid. Ring direction and unrelated world offsets are stable.
+ large=rect(0,0,8,6);front=geo.Backend().fronts(large,(2000000,1000000))
+ assert front and front[0]==(40000,20000)
+ for candidate in front:assert large.Contains(geo.point(candidate))
+ translated=geo.shift(large,13370000,77230000)
+ moved=geo.Backend().fronts(translated,(2000000,1000000))
+ assert moved==[(x+13370000,y+77230000) for x,y in front]
+ small=geo.make(engine.Polygon(((0,0),(200000,0),(0,100000))))
+ first=list(engine.Engine(geo.Backend(),(1500000,1500000)).run_region(small))[0]
+ assert first==(70000,30000)
+ print('Inward fronts, anisotropic metric, small centroid and translation PASS',flush=True)
  backend=geo.Backend();solver=engine.Engine(backend,(1500000,1500000),physical_radius=554000)
  backend.active_envelopes=[('plane-a',2000000)];a_points=list(solver.run_region(a))
  backend.active_envelopes=[('plane-b',2000000)];b_points=list(solver.run_region(geo.shift(a,1600000,0)))
@@ -117,8 +129,9 @@ def board_geometry_checks():
   b.Add(power)
  g=geo.BoardGeometry(b,z,z.GetNetCode(),mm(.6),mm(.3),0)
  assert g.free.Contains(geo.point(g.local((mm(20),mm(18.5))))),'Broad foreign plane interior unnecessarily blocked'
- assert not g.free.Contains(geo.point(g.local((mm(12),mm(16.15))))),'Foreign thin copper neck left unprotected'
- print('Broad foreign plane interior allowed; thin connection protected PASS',flush=True)
+ assert g.free.Contains(geo.point(g.local((mm(12),mm(16.15))))),'Unanchored foreign copper sliver unnecessarily blocked'
+ assert g.guard.allows(g.local((mm(12),mm(16.15)))), 'Terminal-free sliver must be allowed'
+ print('Broad foreign plane and harmless unanchored sliver allowed PASS',flush=True)
 
 
 if __name__=='__main__':

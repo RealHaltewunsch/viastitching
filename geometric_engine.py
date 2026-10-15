@@ -5,6 +5,7 @@ refined only when a geometric center fails and the rectangle is not provably
 excluded by existing spacing disks. No retry count or wall-clock cutoff is used.
 """
 from collections import deque
+from functools import cached_property
 from itertools import chain
 from dataclasses import dataclass
 from fractions import Fraction
@@ -41,15 +42,25 @@ def ring_contains(p,ring):
 class Polygon:
     outer: tuple
     holes: tuple = ()
-    @property
+    @cached_property
     def bounds(self):
         return min(x for x,y in self.outer),min(y for x,y in self.outer),max(x for x,y in self.outer),max(y for x,y in self.outer)
+    @cached_property
+    def area(self):
+        def twice(r):return abs(sum(a[0]*r[(i+1)%len(r)][1]-r[(i+1)%len(r)][0]*a[1] for i,a in enumerate(r)))
+        return (twice(self.outer)-sum(twice(r) for r in self.holes))/2
     def contains(self,p):
         return ring_contains(p,self.outer) and not any(ring_contains(p,r) for r in self.holes)
     def centers(self):
         """Spalt centers from a few cross-sections, not all 0.01-mm rows."""
         a,b,c,d=self.bounds
         center=(nearest(Fraction(a+c,2)),nearest(Fraction(b+d,2)))
+        # Area centroid first; cross-sections provide interior alternatives for
+        # concave regions and holes whose centroid lies outside the copper.
+        cross=sum(a[0]*self.outer[(i+1)%len(self.outer)][1]-self.outer[(i+1)%len(self.outer)][0]*a[1] for i,a in enumerate(self.outer))
+        if cross:
+            centroid=tuple(nearest(Fraction(sum((a[k]+self.outer[(i+1)%len(self.outer)][k])*(a[0]*self.outer[(i+1)%len(self.outer)][1]-self.outer[(i+1)%len(self.outer)][0]*a[1]) for i,a in enumerate(self.outer)),3*cross)) for k in (0,1))
+            yield centroid
         yield center
         # Vertex-event intervals contain linearly moving boundaries. Their
         # mid-sections expose narrow channels even if the bbox center is outside.
@@ -162,15 +173,17 @@ class Engine:
                 if limit is not None and not self.density:
                     closest=(max(lo,min(hi,maximum_from[0])),max(bt,min(tp,maximum_from[1])))
                     if not limit.within(closest,maximum_from):continue
-                if self.separation.covers_box(bounds) or (self.physical_radius and self.physical.covers_box(self.backend.world_bounds(bounds))) or any(e.covers_box(self.backend.world_bounds(bounds)) for e in self.active_envelopes):continue
+                if getattr(self.backend,"forbidden_box",lambda bounds:False)(bounds) or self.separation.covers_box(bounds) or (self.physical_radius and self.physical.covers_box(self.backend.world_bounds(bounds))) or any(e.covers_box(self.backend.world_bounds(bounds)) for e in self.active_envelopes):continue
+                native_poly=self.backend.make(poly)
                 seen=set()
                 candidates=chain((preferred,) if preferred is not None else (),self.centers(poly))
                 if lo==hi and bt==tp:candidates=chain(((lo,bt),),candidates)
                 for p in candidates:
                     if p in seen:continue
                     seen.add(p);self.stats.geometry_probes+=1
-                    if poly.contains(p) and self.separation.allows(p) and (limit is None or limit.within(p,maximum_from)) and (not self.physical_radius or self.physical.allows(self.backend.world(p))) and all(e.allows(self.backend.world(p)) for e in self.active_envelopes):return p
+                    if self.backend.contains(native_poly,p) and self.separation.allows(p) and (limit is None or limit.within(p,maximum_from)) and (not self.physical_radius or self.physical.allows(self.backend.world(p))) and all(e.allows(self.backend.world(p)) for e in self.active_envelopes) and getattr(self.backend,"accepts",lambda p:True)(p):return p
                 if lo==hi and bt==tp:continue
+                if getattr(self.backend,"forbidden_box",lambda bounds:False)(bounds):continue
                 self.stats.refined_boxes+=1
                 # Split candidate ranges at half-step boundaries. Geometric
                 # clipping discards empty halves before any point refinement.
@@ -181,7 +194,7 @@ class Engine:
                     mid=((bt//STEP+tp//STEP)//2)*STEP+STEP//2
                     cuts=[(a,b,c,mid),(a,mid,c,d)]
                 for cut in reversed(cuts):
-                    clipped=self.backend.clip(self.backend.make(poly),cut)
+                    clipped=self.backend.clip(native_poly,cut)
                     if not self.backend.empty(clipped):stack.append(clipped)
         return None
     def run_region(self,shape,anchors=()):
@@ -200,13 +213,26 @@ class Engine:
         protected=getattr(self.density,'protected',None)
         priority=self.backend.intersection(remaining,protected) if protected is not None else None
         edge_stage=priority is not None
+        fronts=deque(getattr(self.backend,'fronts',lambda shape,pitch:())(shape,self.pitch))
+        interior_fronts=deque()
+        if edge_stage:
+            # Defer interior fronts rather than discarding them while the dense
+            # protected band is active. Both stages keep contour order.
+            interior_fronts=deque(p for p in fronts if not self.backend.contains(protected,p))
+            fronts=deque(p for p in fronts if self.backend.contains(protected,p))
         queue=deque();seen=set()
         while not self.backend.empty(remaining):
             self.tick();p=None
             search_area=priority if edge_stage else remaining
+            while fronts:
+                candidate=fronts.popleft()
+                if (self.backend.contains(search_area,candidate) and self.separation.allows(candidate)
+                    and (not self.physical_radius or self.physical.allows(self.backend.world(candidate)))
+                    and getattr(self.backend,"accepts",lambda p:True)(candidate)):
+                    p=candidate;break
             # Grow on the nominal spacing from local accepted points. A blocked
             # ideal is projected to nearby geometry, never retried randomly.
-            while queue:
+            while queue and p is None:
                 ideal,parent=queue.popleft()
                 if ideal in seen:continue
                 seen.add(ideal)
@@ -224,7 +250,7 @@ class Engine:
             if p is None and edge_stage:
                 # The protected band is filled first under the same acceptance
                 # rules. Revisit its growth targets against the interior now.
-                edge_stage=False;seen.clear()
+                edge_stage=False;fronts=interior_fronts;seen.clear()
                 for parent in index.points:
                     factor=self.density.factor(parent)
                     sx,sy=(nearest(v*factor) for v in self.pitch)
@@ -232,6 +258,7 @@ class Engine:
                         queue.append(((nearest(parent[0]+dx),nearest(parent[1]+dy)),parent))
                 continue
             if p is None:break  # Geometric proof: no remaining lattice center.
+            getattr(self.backend,"accept",lambda p:None)(p)
             index.add(p);self.separation.add(p)
             world=self.backend.world(p)
             if self.physical_radius:self.physical.add(world)

@@ -21,6 +21,8 @@ def basic():
  print('Synthetic narrow gap',len(pts),solver.stats,flush=True)
 
 def run(name,out):
+ pitch=tuple(int(v) for v in os.environ.get('GEOMETRIC_PITCH','1500000,1500000').split(','))
+ start_density=float(os.environ.get('GEOMETRIC_DENSITY_START','1'));end_density=float(os.environ.get('GEOMETRIC_DENSITY_END','3'));multiple=int(os.environ.get('GEOMETRIC_DENSITY_MULTIPLE','3'))
  source=Path(os.environ.get('GEOMETRIC_VALIDATION_ROOT',str(out.parent)))/name/'baseline.kicad_pcb'
  b=pcbnew.LoadBoard(str(source))
  if '--shift' in sys.argv:
@@ -31,15 +33,17 @@ def run(name,out):
  # Final CLI DRC explicitly refills with associated project rules.
  start=time.monotonic();last=[start]
  def pulse(stage,n):
-  if time.monotonic()-last[0]>5:print(name,stage,n,'elapsed',round(time.monotonic()-start,1),flush=True);last[0]=time.monotonic()
+  if time.monotonic()-last[0]>5:
+   print(name,stage,n,'elapsed',round(time.monotonic()-start,1),flush=True);last[0]=time.monotonic()
+   if stage=='Place':print('probes',solver.stats.geometry_probes,'boxes',solver.stats.refined_boxes,'connectivity checks',g.guard.graph_checks,'rejections',g.guard.rejected,flush=True)
   return True
  g=geo.BoardGeometry(b,z,z.GetNetCode(),pcbnew.FromMM(.6),pcbnew.FromMM(.3),pcbnew.FromMM(.1),all_layers=('--all' in sys.argv),object_clearance=0,pulse=pulse)
  built=time.monotonic()-start
  density=None
  if '--density' in sys.argv:
   density_module=importlib.import_module(pkg.__name__+'.density_field')
-  density=density_module.board_density(b,(1500000,1500000),origin=g.origin,boundaries=g.backend.polygons(g.topology),pulse=lambda n:pulse('Density',n))
- solver=engine.Engine(g.backend,(pcbnew.FromMM(1.5),)*2,pulse=lambda s:pulse('Place',s.placed),physical_radius=g.pair_radius,anchors=g.anchors,density=density)
+  density=density_module.board_density(b,pitch,start=start_density,end=end_density,multiple=multiple,origin=g.origin,boundaries=g.backend.polygons(g.topology),pulse=lambda n:pulse('Density',n))
+ solver=engine.Engine(g.backend,pitch,pulse=lambda s:pulse('Place',s.placed),physical_radius=g.pair_radius,anchors=g.anchors,density=density)
  pts=[];stats=[]
  for shape,anchors in g.regions():
   added=list(solver.run_region(shape,anchors));pts.extend(added);stats.append({'new':len(added),'anchors':anchors,'positions':added,'polygons':[asdict(p) for p in g.backend.polygons(shape)]})
@@ -56,7 +60,7 @@ def run(name,out):
  for ext in ('.kicad_pro','.kicad_dru'):
   f=source.with_suffix(ext)
   if f.exists():shutil.copy2(f,out/('geometry'+ext))
- result={'origin':g.origin,'name':name,'count':len(pts),'build_seconds':built,'seconds':duration,'stats':vars(solver.stats),'regions':stats,'positions':pts,'ids':ids,'adaptive_density':bool(density)}
+ result={'origin':g.origin,'name':name,'count':len(pts),'build_seconds':built,'seconds':duration,'stats':vars(solver.stats),'regions':stats,'positions':pts,'ids':ids,'adaptive_density':bool(density),'pitch':pitch,'density_settings':[start_density,end_density,multiple],'foreign_graph_checks':g.guard.graph_checks,'foreign_rejections':g.guard.rejected}
  (out/'result.json').write_text(json.dumps(result))
  print(name,'COMPLETE',len(pts),round(duration,3),vars(solver.stats),flush=True)
 if __name__=='__main__':

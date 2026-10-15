@@ -4,7 +4,7 @@ Subtract inscribed spacing disks. Verify the residual by polygon/rectangle
 intersection and exact integer corner proofs. Never trust Engine.find or its
 completion flag. Whole-board point enumeration is not used.
 """
-import json,math,sys,time
+import json,math,sys,time,subprocess,os
 from fractions import Fraction
 from pathlib import Path
 import numpy as np
@@ -21,6 +21,12 @@ density=data.get('density');multiple=density['multiple'] if density else 1
 copper=unary_union([Polygon(p['outer'],p['holes']) for p in density['polygons']]) if density else None
 boundaries=unary_union([Polygon(p['outer'],p['holes']).boundary for p in density.get('boundaries',[])]) if density else None
 factor_cache={}
+certificates=[];oracle=None
+if '--copper-guard' in sys.argv:
+ native=os.environ.get('KICAD_PYTHON','/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/3.9/bin/python3')
+ oracle=subprocess.Popen([native,str(Path(__file__).with_name('native_connectivity_oracle.py')),str(out)],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=(out/'oracle.log').open('w'),text=True)
+ ready=json.loads(oracle.stdout.readline());assert ready.get('ready'),ready
+
 def density_distance(p):
  point=Point(p[0]/sx,p[1]/sy);dist=density['end']
  if copper is not None and not copper.is_empty:dist=min(dist,point.distance(copper))
@@ -95,6 +101,7 @@ for region in data['regions']:
   lo=math.ceil(a*sx/step-1e-9);hi=math.floor(c*sx/step+1e-9)
   bt=math.ceil(b*sy/step-1e-9);tp=math.floor(e*sy/step+1e-9)
   if lo>hi or bt>tp:continue
+  if any(all((x*step-p[0])**2+(y*step-p[1])**2<=r*r for x,y in ((lo,bt),(lo,tp),(hi,bt),(hi,tp))) for p,r in certificates):continue
   corners=[(x*step,y*step) for x,y in ((lo,bt),(lo,tp),(hi,bt),(hi,tp))]
   center=((lo+hi)*step/(2*sx),(bt+tp)*step/(2*sy));reach=math.hypot((hi-lo)*step/(2*sx),(tp-bt)*step/(2*sy))+n/d*multiple
   lower=lower_factor((lo*step,bt*step,hi*step,tp*step))
@@ -108,6 +115,9 @@ for region in data['regions']:
   if shape.covers(Point(p)) and not any(excluded(p,points[j]) for j in closest(tree,(x/sx,y/sy),n/d*multiple)):
    world=(x+origin[0],y+origin[1])
    blocked=any(physical_excluded(world,allp[j]) for j in closest(physical_tree,world,physical)) or any(any(envelope_excluded(world,extra_points[j],extra_radius) for j in closest(extra_tree,world,extra_radius)) for extra_tree,extra_points,extra_radius in active)
+   if not blocked and oracle:
+    oracle.stdin.write(json.dumps(p)+'\n');oracle.stdin.flush()
+    answer=json.loads(oracle.stdout.readline());blocked=not answer['allowed'];certificates=answer['certificates']
    assert blocked,('Remaining insertable center',name,p)
   if lo==hi and bt==tp:continue
   if hi-lo>=tp-bt and hi>lo:
@@ -118,4 +128,8 @@ for region in data['regions']:
    regions=[box(a,b,c,mid),box(a,mid,c,e)]
   stack.extend(piece.intersection(r) for r in regions)
 result={'board':name,'adaptive_density':bool(density),'remaining_insertable_centers':0,'spacing_pass':True,'global_same_net_spacing':bool(data.get('global_spacing')),'global_physical_spacing_pass':True,'foreign_plane_envelopes_pass':True,'nodes':nodes,'point_probes':probes,'seconds':time.monotonic()-start}
+if oracle:
+ oracle.stdin.close();oracle.wait();assert oracle.returncode==0
+ result['foreign_connectivity_constraints']=True;result['foreign_connectivity_certificates']=len(certificates)
+ (out/'audit-certificates.json').write_text(json.dumps(certificates))
 (out/'audit-result.json').write_text(json.dumps(result,indent=2));print(result,flush=True)

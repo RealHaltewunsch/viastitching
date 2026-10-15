@@ -7,8 +7,9 @@ g=geo.BoardGeometry(b,z,z.GetNetCode(),600000,300000,100000,object_clearance=0)
 record=json.loads((out/'result.json').read_text())
 density=None
 if record.get('adaptive_density'):
- density=importlib.import_module(pkg.__name__+'.density_field').board_density(b,(1500000,1500000),origin=g.origin,boundaries=g.backend.polygons(g.topology))
-solver=engine.Engine(g.backend,(1500000,1500000),physical_radius=g.pair_radius,anchors=g.anchors,density=density)
+ pitch=tuple(record.get('pitch',[1500000,1500000]));start,end,multiple=record.get('density_settings',[1,3,3])
+ density=importlib.import_module(pkg.__name__+'.density_field').board_density(b,pitch,start=start,end=end,multiple=multiple,origin=g.origin,boundaries=g.backend.polygons(g.topology))
+solver=engine.Engine(g.backend,tuple(record.get('pitch',[1500000,1500000])),physical_radius=g.pair_radius,anchors=g.anchors,density=density)
 positions=[p for shape,anchors in g.regions() for p in solver.run_region(shape,anchors)]
 expected=json.loads((out/'result.json').read_text())['positions']
 assert positions==[tuple(p) for p in expected],'Current source changed DRC-tested placement'
