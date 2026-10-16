@@ -46,6 +46,21 @@ remaining-area verification belong to the same engine. Old offset, style and
 refill configuration keys are ignored; spacing, tolerances, zone/group ownership
 and the explicit copper mode are preserved. Existing vias are never moved.
 
+## Component pad protection
+
+Stitching **drill disks must not overlap component pads**, including pads on the
+same net, on any enabled copper layer traversed by the via. This is a permanent
+placement rule in both uniform and adaptive modes. The actual pad contour is
+expanded by the drill radius; checking only the drill center is insufficient.
+Existing drilled-pad hole clearances and foreign-net copper clearances remain
+in force. Existing vias are not automatically deleted.
+
+Version 0.5.4 did not enforce this manufacturing policy: ordinary electrical DRC
+allows same-net via-in-pad. Version **0.5.5** adds an explicit independent drill /
+pad audit. See [pad protection validation](docs/pad-drill-protection.md).
+For a clean rerun of an old build, use **Clear only plugin placed vias**, refill
+the zones and generate again. User-placed vias are preserved.
+
 ## Adaptive fill density
 
 The **Adaptive fill density** checkbox is optional and defaults to off. It uses

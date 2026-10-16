@@ -1,6 +1,8 @@
 # Perimeter placement and foreign-zone gap coverage — 0.5.4
 
-This is an experimental KiCad 10 SWIG release of the new placement engine.
+This is a historical validation report for 0.5.4. That version allowed
+same-net via-in-pad; its electrical DRC checks did not enforce the manufacturing
+policy. [Version 0.5.5 adds explicit drill/pad protection](pad-drill-protection.md).
 
 ## The reported failure
 

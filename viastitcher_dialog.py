@@ -18,7 +18,7 @@ from .density_field import board_density, validate_density
 
 import json
 
-__version__ = "0.5.4"
+__version__ = "0.5.5"
 __plugin_name__ = "ViaStitcher"
 __plugin_config_key__ = "ViaStitcher"
 # Continue accepting the marker written before the public plugin rename.

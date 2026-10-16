@@ -224,6 +224,15 @@ class BoardGeometry:
                     clearance=clearances[l]
                     item.TransformShapeToPolygon(poly,l,radius+clearance+GUARD,ERROR,pcbnew.ERROR_OUTSIDE)
                     obstacles.Append(self.local_shape(poly))
+            if isinstance(item,pcbnew.PAD) and item.GetNetCode()==self.netcode:
+                # Same-net copper overlap is electrically legal, but drilling
+                # into a component pad is not permitted for stitching. Exclude
+                # the entire drill disk on every traversed copper layer, using
+                # the actual pad contour rather than its bounding rectangle.
+                for l in sorted(common):
+                    poly=pcbnew.SHAPE_POLY_SET()
+                    item.TransformShapeToPolygon(poly,l,self.drill//2+GUARD,ERROR,pcbnew.ERROR_OUTSIDE)
+                    obstacles.Append(self.local_shape(poly))
             if isinstance(item,pcbnew.PAD) and max(item.GetDrillSize().x,item.GetDrillSize().y)>0:
                 # Exact oblong/rotated drill contour. Own-net pads need only
                 # hole separation; foreign pads also require hole-to-copper.

@@ -112,7 +112,9 @@ for region in data['regions']:
   if any(any(all(envelope_excluded(p,extra_points[j],extra_radius) for p in worldcorners) for j in closest(extra_tree,worldcenter,math.hypot((hi-lo)*step/2,(tp-bt)*step/2)+extra_radius)) for extra_tree,extra_points,extra_radius in active):continue
   x=(lo+hi)//2*step;y=(bt+tp)//2*step;p=(x,y)
   probes+=1
-  if shape.covers(Point(p)) and not any(excluded(p,points[j]) for j in closest(tree,(x/sx,y/sy),n/d*multiple)):
+  # Native exclusion edges are forbidden; GEOS covers includes them.
+  # Probe the strict permitted interior, excluding numerical boundary points.
+  if shape.contains(Point(p)) and not any(excluded(p,points[j]) for j in closest(tree,(x/sx,y/sy),n/d*multiple)):
    world=(x+origin[0],y+origin[1])
    blocked=any(physical_excluded(world,allp[j]) for j in closest(physical_tree,world,physical)) or any(any(envelope_excluded(world,extra_points[j],extra_radius) for j in closest(extra_tree,world,extra_radius)) for extra_tree,extra_points,extra_radius in active)
    if not blocked and oracle:
@@ -127,7 +129,7 @@ for region in data['regions']:
    mid=((bt+tp)//2+.5)*step/sy
    regions=[box(a,b,c,mid),box(a,mid,c,e)]
   stack.extend(piece.intersection(r) for r in regions)
-result={'board':name,'adaptive_density':bool(density),'remaining_insertable_centers':0,'spacing_pass':True,'global_same_net_spacing':bool(data.get('global_spacing')),'global_physical_spacing_pass':True,'foreign_plane_envelopes_pass':True,'nodes':nodes,'point_probes':probes,'seconds':time.monotonic()-start}
+result={'board':name,'adaptive_density':bool(density),'remaining_insertable_centers':0,'coverage_domain':'strict permitted polygon interior','spacing_pass':True,'global_same_net_spacing':bool(data.get('global_spacing')),'global_physical_spacing_pass':True,'foreign_plane_envelopes_pass':True,'nodes':nodes,'point_probes':probes,'seconds':time.monotonic()-start}
 if oracle:
  oracle.stdin.close();oracle.wait();assert oracle.returncode==0
  result['foreign_connectivity_constraints']=True;result['foreign_connectivity_certificates']=len(certificates)
